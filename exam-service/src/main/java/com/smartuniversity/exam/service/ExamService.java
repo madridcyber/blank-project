@@ -27,6 +27,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ExamService {
@@ -52,9 +53,15 @@ public class ExamService {
         this.objectMapper = objectMapper;
     }
 
+    @Transactional(readOnly = true)
+    public Lis<eExamDto> listExams(String tenantId) {
+        return examRepository.findAllByTenantId(tenantId).stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
-    public ExamDto createExam(CreateExamRequest request, UUID creatorId, String tenantId, String role) {
-        if (!"TEACHER".equals(role) && !"ADMIN".equals(role)) {
+    public ExamDto createExam(CreateExamRequest request, UUID creatorId, String        if (!"TEACHER".equals(role) && !"ADMIN".equals(role)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only teachers or admins may create exams");
         }
         if (CollectionUtils.isEmpty(request.getQuestions())) {

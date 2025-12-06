@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -31,6 +33,19 @@ public class ExamController {
 
     public ExamController(ExamService examService) {
         this.examService = examService;
+    }
+
+    @GetMapping("/exams")
+    @Operation(
+            summary = "List exams",
+            description = "Returns all exams for the current tenant. This endpoint is tenant-scoped and does not expose submissions."
+    )
+    public ResponseEntity<List<ExamDto>> listExams(@RequestHeader("X-Tenant-Id") String tenantId) {
+        if (!StringUtils.hasText(tenantId)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        List<ExamDto> exams = examService.listExams(tenantId);
+        return ResponseEntity.ok(exams);
     }
 
     @PostMapping("/exams")

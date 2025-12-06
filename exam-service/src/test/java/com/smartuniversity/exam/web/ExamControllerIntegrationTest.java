@@ -21,7 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -108,5 +110,24 @@ class ExamControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(submit)))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void listExamsReturnsExamsForTenant() throws Exception {
+        Exam exam = new Exam();
+        exam.setTenantId(tenantId);
+        exam.setCreatorId(UUID.fromString(teacherId));
+        exam.setTitle("ListTest");
+        exam.setDescription("List test exam");
+        exam.setStartTime(Instant.now());
+        exam.setState(ExamStateType.SCHEDULED);
+        examRepository.save(exam);
+
+        mockMvc.perform(get("/exam/exams")
+                        .header("X-Tenant-Id", tenantId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id", notNullValue()))
+                .andExpect(jsonPath("$[0].title").value("ListTest"));
     }
 }

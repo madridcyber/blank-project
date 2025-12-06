@@ -212,6 +212,13 @@ Once `docker-compose up --build` is running:
      - `/dashboard/shuttle` for shuttle position.
    - The Dashboard service keeps these values in memory and updates them via scheduled jobs, so responses are fast and consistent.
 
+> **Note on demo data**  
+> When running via `docker-compose`, the `demo` profile seeds initial data for the `engineering` tenant:
+> - Booking: `Room 101` and `Lab A` resources.
+> - Marketplace: `Campus Notebook` and `Algorithms Textbook` products.
+> - Exam: a `Sample Demo Exam` in `SCHEDULED` state.
+> You can inspect the seeded exams via the Exam Service Swagger UI (`http://localhost:8085/swagger-ui.html`, `GET /exam/exams`) or by calling `GET /exam/exams` through the gateway.
+
 This walkthrough exercises:
 
 - Authentication & multi-tenancy (tenant-specific data everywhere).
