@@ -1,5 +1,6 @@
 package com.smartuniversity.common.events;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -14,5 +15,5 @@ public record OrderConfirmedEvent(
         String tenantId,
         BigDecimal totalAmount,
         Instant confirmedAt
-) {
+) implements Serializable {
 }

@@ -1,5 +1,6 @@
 package com.smartuniversity.common.events;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -11,5 +12,5 @@ public record ExamStartedEvent(
         UUID creatorId,
         String tenantId,
         Instant startedAt
-) {
+) implements Serializable {
 }
