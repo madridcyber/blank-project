@@ -111,15 +111,116 @@ Key endpoints:
 - Frontend SPA: http://localhost:3000
 - RabbitMQ management UI: http://localhost:15672 (guest/guest)
 
-### Example Flow
+### End-to-End Usage Walkthrough
 
-1. Open the frontend at http://localhost:3000.
-2. Register a new user (choose tenant, e.g. `engineering`, and role STUDENT or TEACHER).
-3. Log in and explore:
-   - **Dashboard**: live sensors and shuttle simulation.
-   - **Booking**: view available resources.
-   - **Marketplace**: view products (teachers/admins can create products via API).
-   - **Exams**: create and start a demo exam (teacher) and observe the behavior with the Circuit Breaker and notifications.
+Once `docker-compose up --build` is running:
+
+1. Open the SPA at **http://localhost:3000**.
+
+2. **Register a teacher user**
+
+   - Go to **Register**.
+   - Choose a username (e.g. `teacher1`).
+   - Choose a password.
+   - Set **Tenant / Faculty** to e.g. `engineering`.
+   - Set **Role** to `TEACHER`.
+   - Submit the form – you are automatically logged in after successful registration.
+
+3. **Teacher: explore Dashboard**
+
+   - Go to **Dashboard**.
+   - Observe:
+     - Live sensor cards (temperature, humidity, CO₂, energy).
+     - Shuttle position moving within the pseudo-map.
+   - Data is per-tenant (here: `engineering`), updated by scheduled jobs in the Dashboard service.
+
+4. **Teacher: create a resource and book it**
+
+   - Switch to **Booking**.
+   - Initially, the list may be empty (or contain seeded resources if you added any).
+   - As a TEACHER/ADMIN, you can add resources via backend, or pre-seed via DB; by default, the UI shows existing resources.
+   - Select a resource from the list in the reservation form.
+   - Pick a `Start time` and `End time` using the datetime inputs.
+   - Click **Request reservation**.
+   - Booking Service will:
+     - Check for overlapping reservations within a transaction.
+     - Reject overlapping requests with **409 Conflict** (no overbooking).
+   - The UI shows a success or “slot already booked” message.
+
+5. **Teacher: create marketplace products**
+
+   - Go to **Marketplace**.
+   - As TEACHER/ADMIN, a **Create product** form is visible at the top.
+   - Fill in:
+     - Product name (e.g. `Algorithms Textbook`).
+     - Description (e.g. `CS fundamentals`).
+     - Price and initial stock.
+   - Submit:
+     - The product is created via `POST /market/products`.
+     - The product list is automatically updated and cached per tenant.
+
+6. **Student: register and buy a product (Saga flow)**
+
+   - Log out and register a new **STUDENT** user (e.g. `student1`) with the same tenant (`engineering`).
+   - Log in as this student.
+   - Go to **Marketplace**:
+     - You see the products created by the teacher (tenant-scoped).
+   - Click **Buy 1** on a product:
+     - SPA sends `POST /market/orders/checkout`.
+     - Saga orchestrator in Marketplace:
+       - Creates a `PENDING` order.
+       - Calls Payment Service to authorise.
+       - Decrements stock with pessimistic locking.
+       - Marks order `CONFIRMED` and publishes `order.confirmed` event.
+   - The UI displays a success message or appropriate error (e.g. insufficient stock or simulated payment failure).
+   - Notification Service consumes the `order.confirmed` event and logs a `NotificationLog` entry.
+
+7. **Teacher: create and start an exam**
+
+   - Log back in as `teacher1`.
+   - Go to **Exams**.
+   - Fill in the **Exam title** and a single **Question**.
+   - Click **Create exam**:
+     - Calls `POST /exam/exams`, creating a `SCHEDULED` exam.
+     - The exam ID is shown below the form.
+   - Click **Start exam**:
+     - Exam Service uses the State pattern to move from `SCHEDULED` → `LIVE`.
+     - It calls Notification Service via a **Resilience4j Circuit Breaker**:
+       - On success: HTTP call logs a notification.
+       - On failure: fallback logs an error, but the exam still starts.
+     - Exam Service publishes `ExamStartedEvent` to RabbitMQ.
+     - Notification Service also logs the event.
+
+8. **Student: submit exam answers**
+
+   - Log in as `student1`.
+   - Go to **Exams**.
+   - In the student section:
+     - Paste the exam ID that the teacher created and started.
+     - Enter your answer in the text area.
+     - Click **Submit answers**.
+   - Exam Service:
+     - Verifies the exam is in `LIVE` state.
+     - Creates a `Submission` tied to your student id and tenant.
+     - Prevents duplicate submissions for the same exam/student.
+
+9. **Dashboard: monitor ongoing activity**
+
+   - With any logged-in user in the same tenant, return to **Dashboard**.
+   - The SPA periodically polls:
+     - `/dashboard/sensors` for live metrics.
+     - `/dashboard/shuttle` for shuttle position.
+   - The Dashboard service keeps these values in memory and updates them via scheduled jobs, so responses are fast and consistent.
+
+This walkthrough exercises:
+
+- Authentication & multi-tenancy (tenant-specific data everywhere).
+- Booking with no overbooking and pessimistic locking.
+- Marketplace Saga and compensation paths.
+- Payment Strategy pattern behind the Payment Service.
+- Exam lifecycle with State pattern and Circuit Breaker to Notification.
+- Event-driven notifications via RabbitMQ.
+- Dashboard/IoT simulation with periodic updates.
 
 ## Status
 
