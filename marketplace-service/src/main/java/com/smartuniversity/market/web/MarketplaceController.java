@@ -2,6 +2,8 @@ package com.smartuniversity.market.web;
 
 import com.smartuniversity.market.domain.Product;
 import com.smartuniversity.market.repository.ProductRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import com.smartuniversity.market.service.OrderSagaService;
 import com.smartuniversity.market.web.dto.CheckoutRequest;
 import com.smartuniversity.market.web.dto.OrderDto;
@@ -39,6 +41,7 @@ public class MarketplaceController {
     }
 
     @GetMapping("/products")
+    @Cacheable(cacheNames = "productsByTenant", key = "#tenantId")
     public List<ProductDto> listProducts(@RequestHeader("X-Tenant-Id") String tenantId) {
         return productRepository.findAllByTenantId(tenantId).stream()
                 .map(p -> new ProductDto(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getStock()))
@@ -46,6 +49,7 @@ public class MarketplaceController {
     }
 
     @PostMapping("/products")
+    @CacheEvict(cacheNames = "productsByTenant", key = "#tenantId")
     public ResponseEntity<ProductDto> createProduct(@Valid @RequestBody ProductRequest request,
                                                     @RequestHeader("X-User-Id") String userIdHeader,
                                                     @RequestHeader("X-User-Role") String role,

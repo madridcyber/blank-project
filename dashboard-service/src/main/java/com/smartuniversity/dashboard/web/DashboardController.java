@@ -52,4 +52,19 @@ public class DashboardController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
     }
+
+    // Backwards-compatible singular endpoint as described in the specification.
+    @GetMapping("/shuttle")
+    public ResponseEntity<ShuttleDto> getSingleShuttle(@RequestHeader(value = "X-Tenant-Id", required = false) String tenantId) {
+        if (!StringUtils.hasText(tenantId)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        List<ShuttleLocation> shuttles = dashboardService.getShuttles(tenantId);
+        if (shuttles.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
+        ShuttleLocation s = shuttles.get(0);
+        ShuttleDto dto = new ShuttleDto(s.getId(), s.getName(), s.getLatitude(), s.getLongitude(), s.getUpdatedAt());
+        return ResponseEntity.ok(dto);
+    }
 }

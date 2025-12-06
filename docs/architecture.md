@@ -199,3 +199,138 @@ Main components:
   - Integration tests for key workflows (checkout, bookings, exams).
 
 For deeper decision context, see the ADRs under `docs/adrs/`.
+
+---
+
+## Sequence Diagrams
+
+This section provides sequence diagrams for key workflows: booking (no overbooking), marketplace Saga, exam start with Circuit Breaker, and dashboard refresh.
+
+### Booking Workflow (No Overbooking)
+
+```mermaid
+sequenceDiagram
+    participant User as Student (SPA)
+    participant GW as API Gateway
+    participant BS as Booking Service
+    participant BDB as Booking DB
+
+    User->>GW: POST /booking/reservations<br/>{resourceId, startTime, endTime}
+    GW->>BS: POST /booking/reservations<br/>+ X-User-Id, X-Tenant-Id
+
+    activate BS
+    BS->>BDB: BEGIN TX
+    BS->>BDB: SELECT reservations WHERE<br/>resourceId = ? AND tenant_id = ?<br/>AND endTime > startTime<br/>AND startTime &lt; endTime<br/>(FOR UPDATE)
+    alt overlapping reservations found
+        BDB-->>BS: rows with overlaps
+        BS-->>GW: 409 CONFLICT (resource already reserved)
+        GW-->>User: 409 CONFLICT
+    else no overlaps
+        BDB-->>BS: empty result
+        BS->>BDB: INSERT new reservation (CREATED)
+        BS->>BDB: COMMIT
+        BS-->>GW: 201 CREATED + reservation DTO
+        GW-->>User: 201 CREATED
+    end
+    deactivate BS
+```
+
+### Marketplace Checkout Saga
+
+```mermaid
+sequenceDiagram
+    participant User as Buyer (SPA)
+    participant GW as API Gateway
+    participant MS as Marketplace Service
+    participant MDB as Market DB
+    participant PS as Payment Service
+    participant PDB as Payment DB
+    participant MQ as RabbitMQ
+
+    User->>GW: POST /market/orders/checkout<br/>{items}
+    GW->>MS: POST /market/orders/checkout<br/>+ X-User-Id, X-Tenant-Id
+
+    activate MS
+    MS->>MDB: BEGIN TX
+    MS->>MDB: INSERT order (PENDING) + items
+    MS->>MDB: COMMIT
+
+    MS->>PS: POST /payment/payments/authorize<br/>{orderId, amount} + X-Tenant-Id
+    PS->>PDB: INSERT payment (AUTHORIZED)
+    PS-->>MS: 200 OK (AUTHORIZED)
+
+    alt stock sufficient
+        MS->>MDB: BEGIN TX
+        MS->>MDB: SELECT products FOR UPDATE
+        MS->>MDB: UPDATE products SET stock = stock - qty
+        MS->>MDB: UPDATE order status = CONFIRMED
+        MS->>MDB: COMMIT
+        MS->>MQ: publish OrderConfirmedEvent
+        MS-->>GW: 201 CREATED (CONFIRMED order)
+        GW-->>User: 201 CREATED
+    else stock insufficient
+        MS->>PS: POST /payment/payments/cancel/{orderId}
+        PS->>PDB: UPDATE payment = CANCELED
+        MS->>MDB: UPDATE order status = CANCELED
+        MS-->>GW: 409 CONFLICT (insufficient stock)
+        GW-->>User: 409 CONFLICT
+    end
+    deactivate MS
+```
+
+### Exam Start with Circuit Breaker + Notification
+
+```mermaid
+sequenceDiagram
+    participant Teacher as Teacher (SPA)
+    participant GW as API Gateway
+    participant ES as Exam Service
+    participant EDB as Exam DB
+    participant NS as Notification Service
+    participant MQ as RabbitMQ
+
+    Teacher->>GW: POST /exam/exams/{id}/start
+    GW->>ES: POST /exam/exams/{id}/start<br/>+ X-User-Id, X-User-Role, X-Tenant-Id
+
+    activate ES
+    ES->>EDB: SELECT exam BY id AND tenant_id
+    ES->>ES: validate creator, role, and state (SCHEDULED)
+    ES->>EDB: UPDATE exam.state = LIVE
+
+    ES->>NS: POST /notification/notify/exam/{id}<br/>(wrapped in CircuitBreaker)
+    alt Notification healthy
+        NS-->>ES: 202 ACCEPTED (logged notification)
+    else Notification failures
+        ES->>ES: fallback invoked<br/>log error and continue
+    end
+
+    ES->>MQ: publish ExamStartedEvent
+    ES-->>GW: 200 OK (exam state LIVE)
+    GW-->>Teacher: 200 OK
+    deactivate ES
+```
+
+### Dashboard Data Refresh
+
+```mermaid
+sequenceDiagram
+    participant SPA as Dashboard SPA
+    participant GW as API Gateway
+    participant DS as Dashboard Service
+
+    loop every 5-7 seconds
+        SPA->>GW: GET /dashboard/sensors
+        GW->>DS: GET /dashboard/sensors + X-Tenant-Id
+        DS-->>GW: 200 OK [sensor readings]
+        GW-->>SPA: 200 OK [sensor readings]
+
+        SPA->>GW: GET /dashboard/shuttle
+        GW->>DS: GET /dashboard/shuttle + X-Tenant-Id
+        DS-->>GW: 200 OK [single shuttle position]
+        GW-->>SPA: 200 OK [single shuttle position]
+
+        SPA->>SPA: update UI metrics and shuttle dot
+    end
+```
+
+These diagrams complement the C4 views by showing *runtime* behaviour for the most important workflows.

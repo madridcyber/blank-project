@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { useConfiguredApi } from '../api/client';
+import { useAuth } from '../state/AuthContext';
 
 export const ExamsPage: React.FC = () => {
   const api = useConfiguredApi();
+  const { role } = useAuth();
+
   const [title, setTitle] = useState('Sample exam');
   const [question, setQuestion] = useState('What is microservices architecture?');
   const [createdExamId, setCreatedExamId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+
+  const [submitExamId, setSubmitExamId] = useState('');
+  const [studentAnswer, setStudentAnswer] = useState('');
 
   const handleCreateExam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,40 +45,97 @@ export const ExamsPage: React.FC = () => {
     }
   };
 
+  const handleStudentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus(null);
+    if (!submitExamId) {
+      setStatus('Provide an exam ID to submit.');
+      return;
+    }
+    try {
+      const payload = {
+        answers: {
+          q1: studentAnswer
+        }
+      };
+      await api.post(`/exam/exams/${submitExamId}/submit`, payload);
+      setStatus('Submission sent successfully.');
+      setStudentAnswer('');
+    } catch (err: any) {
+      setStatus(err.response?.data?.message ?? 'Failed to submit answers');
+    }
+  };
+
+  const isTeacherOrAdmin = role === 'TEACHER' || role === 'ADMIN';
+
   return (
     <section className="card">
       <div className="card-header">
         <div>
           <div className="card-title">Exam orchestration</div>
-          <div className="card-subtitle">Create and start a simple exam (teacher flow)</div>
+          <div className="card-subtitle">Create, start, and submit exams</div>
         </div>
         <div className="chip">State + Circuit Breaker demo</div>
       </div>
-      <form onSubmit={handleCreateExam}>
-        <div className="form-field">
-          <label className="form-label">Exam title</label>
-          <input className="form-input" value={title} onChange={(e) => setTitle(e.target.value)} required />
-        </div>
-        <div className="form-field">
-          <label className="form-label">Question</label>
-          <input className="form-input" value={question} onChange={(e) => setQuestion(e.target.value)} required />
-        </div>
-        <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.5rem' }}>
-          <button type="submit" className="btn-primary">
-            Create exam
-          </button>
-          <button type="button" className="btn-ghost" onClick={handleStartExam}>
-            Start exam
-          </button>
-        </div>
-      </form>
-      {createdExamId && (
-        <div className="card-subtitle" style={{ marginTop: '0.7rem' }}>
-          Exam ID: <code>{createdExamId}</code>
-        </div>
+
+      {isTeacherOrAdmin && (
+        <>
+          <form onSubmit={handleCreateExam}>
+            <div className="form-field">
+              <label className="form-label">Exam title</label>
+              <input className="form-input" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            </div>
+            <div className="form-field">
+              <label className="form-label">Question</label>
+              <input className="form-input" value={question} onChange={(e) => setQuestion(e.target.value)} required />
+            </div>
+            <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.5rem' }}>
+              <button type="submit" className="btn-primary">
+                Create exam
+              </button>
+              <button type="button" className="btn-ghost" onClick={handleStartExam}>
+                Start exam
+              </button>
+            </div>
+          </form>
+          {createdExamId && (
+            <div className="card-subtitle" style={{ marginTop: '0.7rem' }}>
+              Exam ID: <code>{createdExamId}</code>
+            </div>
+          )}
+        </>
       )}
+
+      {!isTeacherOrAdmin && (
+        <form onSubmit={handleStudentSubmit} style={{ marginTop: '0.8rem' }}>
+          <div className="form-field">
+            <label className="form-label">Exam ID</label>
+            <input
+              className="form-input"
+              value={submitExamId}
+              onChange={(e) => setSubmitExamId(e.target.value)}
+              placeholder="Paste the exam ID shared by your teacher"
+              required
+            />
+          </div>
+          <div className="form-field">
+            <label className="form-label">Your answer</label>
+            <textarea
+              className="form-input"
+              style={{ minHeight: '80px', borderRadius: '14px' }}
+              value={studentAnswer}
+              onChange={(e) => setStudentAnswer(e.target.value)}
+              required
+            />
+          </div>
+          <button type="submit" className="btn-primary">
+            Submit answers
+          </button>
+        </form>
+      )}
+
       {status && (
-        <div className="card-subtitle" style={{ marginTop: '0.5rem' }}>
+        <div className="card-subtitle" style={{ marginTop: '0.7rem' }}>
           {status}
         </div>
       )}
