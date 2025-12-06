@@ -99,13 +99,36 @@ This will produce JARs under each module's `target/` directory (e.g. `auth-servi
 
 ### Start everything
 
-From the repository root:
+From the repository root you have two options:
+
+#### Option 1 – Using the helper script (recommended)
+
+```bash
+chmod +x scripts/start-platform.sh   # once
+./scripts/start-platform.sh          # build + docker-compose up --build
+```
+
+Environment flags:
+
+- `SKIP_TESTS=1` – skip Maven tests during the build.
+- `DETACH=1` – run `docker-compose up` in detached mode.
+
+#### Option 2 – Manual docker-compose
+
+Build the backend JARs:
+
+```bash
+mvn clean package
+```
+
+Then start everything:
 
 ```bash
 docker-compose up --build
 ```
 
-Key endpoints:
+Key endpoints</:
+
 
 - API Gateway: http://localhost:8080
 - Frontend SPA: http://localhost:3000
