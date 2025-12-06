@@ -432,3 +432,39 @@ Typical SPA configuration:
 
 - `VITE_API_BASE_URL=http://localhost:8080`
 - Axios instance adds the `Authorization` header from the stored JWT; Gateway takes care of the rest.
+
+---
+
+## 9. OpenAPI / Swagger Endpoints
+
+In addition to this textual overview, each Spring Boot service (except the Gateway) exposes an OpenAPI description and Swagger UI when running in local dev:
+
+- **Auth Service** (port 8081):
+  - OpenAPI JSON: `http://localhost:8081/v3/api-docs`
+  - Swagger UI: `http://localhost:8081/swagger-ui.html`
+
+- **Booking Service** (port 8082):
+  - OpenAPI JSON: `http://localhost:8082/v3/api-docs`
+  - Swagger UI: `http://localhost:8082/swagger-ui.html`
+
+- **Marketplace Service** (port 8083):
+  - OpenAPI JSON: `http://localhost:8083/v3/api-docs`
+  - Swagger UI: `http://localhost:8083/swagger-ui.html`
+
+- **Payment Service** (port 8084):
+  - OpenAPI JSON: `http://localhost:8084/v3/api-docs`
+  - Swagger UI: `http://localhost:8084/swagger-ui.html`
+
+- **Exam Service** (port 8085):
+  - OpenAPI JSON: `http://localhost:8085/v3/api-docs`
+  - Swagger UI: `http://localhost:8085/swagger-ui.html`
+
+- **Notification Service** (port 8086):
+  - OpenAPI JSON: `http://localhost:8086/v3/api-docs`
+  - Swagger UI: `http://localhost:8086/swagger-ui.html`
+
+- **Dashboard Service** (port 8087):
+  - OpenAPI JSON: `http://localhost:8087/v3/api-docs`
+  - Swagger UI: `http://localhost:8087/swagger-ui.html`
+
+These documents are generated from the controllers and DTO annotations (via `springdoc-openapi`) and are useful for interactive exploration and client generation.

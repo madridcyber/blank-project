@@ -88,7 +88,8 @@ public class MarketplaceController {
     @Operation(summary = "Checkout order", description = "Orchestrates the Saga across payment and stock updates for the given items")
     public ResponseEntity<OrderDto> checkout(@Valid @RequestBody CheckoutRequest request,
                                              @RequestHeader("X-User-Id") String userIdHeader,
-                                             @
+                                             @RequestHeader("X-Tenant-Id") String tenantId) {
+
         if (!StringUtils.hasText(userIdHeader)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }

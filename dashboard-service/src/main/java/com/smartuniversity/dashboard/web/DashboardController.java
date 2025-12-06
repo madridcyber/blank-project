@@ -16,11 +16,15 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * REST API for live dashboard data (sensors and shuttle locations).
  */
 @RestController
 @RequestMapping("/dashboard")
+@Tag(name = "Dashboard", description = "Live campus sensors and shuttle tracking")
 public class DashboardController {
 
     private final DashboardService dashboardService;
@@ -30,6 +34,7 @@ public class DashboardController {
     }
 
     @GetMapping("/sensors")
+    @Operation(summary = "List sensors", description = "Returns the latest sensor readings for the current tenant")
     public ResponseEntity<List<SensorDto>> getSensors(@RequestHeader(value = "X-Tenant-Id", required = false) String tenantId) {
         if (!StringUtils.hasText(tenantId)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -42,6 +47,7 @@ public class DashboardController {
     }
 
     @GetMapping("/shuttles")
+    @Operation(summary = "List shuttles", description = "Returns all shuttle locations for the current tenant")
     public ResponseEntity<List<ShuttleDto>> getShuttles(@RequestHeader(value = "X-Tenant-Id", required = false) String tenantId) {
         if (!StringUtils.hasText(tenantId)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -55,6 +61,7 @@ public class DashboardController {
 
     // Backwards-compatible singular endpoint as described in the specification.
     @GetMapping("/shuttle")
+    @Operation(summary = "Get single shuttle", description = "Returns the first shuttle for the current tenant (demo convenience endpoint)")
     public ResponseEntity<ShuttleDto> getSingleShuttle(@RequestHeader(value = "X-Tenant-Id", required = false) String tenantId) {
         if (!StringUtils.hasText(tenantId)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

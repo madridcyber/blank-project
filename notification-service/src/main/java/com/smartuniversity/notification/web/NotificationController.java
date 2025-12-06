@@ -1,6 +1,8 @@
 package com.smartuniversity.notification.web;
 
 import com.smartuniversity.notification.service.NotificationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/notification")
+@Tag(name = "Notifications", description = "Notification HTTP endpoints used by other services")
 public class NotificationController {
 
     private final NotificationService notificationService;
@@ -24,6 +27,7 @@ public class NotificationController {
     }
 
     @PostMapping("/notify/exam/{examId}")
+    @Operation(summary = "Request exam notification", description = "Logs a notification request for the given exam. Used by the Exam service.")
     public ResponseEntity<Void> notifyExam(@PathVariable("examId") String examId,
                                            @RequestHeader(value = "X-Tenant-Id", required = false) String tenantId) {
 
