@@ -4,6 +4,8 @@ import com.smartuniversity.payment.domain.Payment;
 import com.smartuniversity.payment.service.PaymentService;
 import com.smartuniversity.payment.web.dto.PaymentAuthorizationRequest;
 import com.smartuniversity.payment.web.dto.PaymentResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/payment/payments")
+@Tag(name = "Payment", description = "Payment authorization and cancellation (Saga participant)")
 public class PaymentController {
 
     private final PaymentService paymentService;
@@ -31,6 +34,7 @@ public class PaymentController {
     }
 
     @PostMapping("/authorize")
+    @Operation(summary = "Authorize payment", description = "Authorizes a payment for an order and persists payment state")
     public ResponseEntity<PaymentResponse> authorize(
             @Valid @RequestBody PaymentAuthorizationRequest request,
             @RequestHeader("X-Tenant-Id") String tenantId) {
@@ -45,6 +49,7 @@ public class PaymentController {
     }
 
     @PostMapping("/cancel/{orderId}")
+    @Operation(summary = "Cancel payment", description = "Applies compensation by cancelling a previously authorized payment for an order")
     public ResponseEntity<PaymentResponse> cancel(
             @PathVariable("orderId") UUID orderId,
             @RequestHeader("X-Tenant-Id") String tenantId) {

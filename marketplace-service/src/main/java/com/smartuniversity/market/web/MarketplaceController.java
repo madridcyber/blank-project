@@ -9,6 +9,8 @@ import com.smartuniversity.market.web.dto.CheckoutRequest;
 import com.smartuniversity.market.web.dto.OrderDto;
 import com.smartuniversity.market.web.dto.ProductDto;
 import com.smartuniversity.market.web.dto.ProductRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/market")
+@Tag(name = "Marketplace", description = "Products catalog and Saga-based checkout")
 public class MarketplaceController {
 
     private final ProductRepository productRepository;
@@ -42,6 +45,7 @@ public class MarketplaceController {
 
     @GetMapping("/products")
     @Cacheable(cacheNames = "productsByTenant", key = "#tenantId")
+    @Operation(summary = "List products", description = "Returns all products for the current tenant")
     public List<ProductDto> listProducts(@RequestHeader("X-Tenant-Id") String tenantId) {
         return productRepository.findAllByTenantId(tenantId).stream()
                 .map(p -> new ProductDto(p.getId(), p.getName(), p.getDescription(), p.getPrice(), p.getStock()))
@@ -50,6 +54,7 @@ public class MarketplaceController {
 
     @PostMapping("/products")
     @CacheEvict(cacheNames = "productsByTenant", key = "#tenantId")
+    @Operation(summary = "Create product", description = "Creates a new product (TEACHER/ADMIN only, enforced at gateway)")
     public ResponseEntity<ProductDto> createProduct(@Valid @RequestBody ProductRequest request,
                                                     @RequestHeader("X-User-Id") String userIdHeader,
                                                     @RequestHeader("X-User-Role") String role,
@@ -80,10 +85,10 @@ public class MarketplaceController {
     }
 
     @PostMapping("/orders/checkout")
+    @Operation(summary = "Checkout order", description = "Orchestrates the Saga across payment and stock updates for the given items")
     public ResponseEntity<OrderDto> checkout(@Valid @RequestBody CheckoutRequest request,
                                              @RequestHeader("X-User-Id") String userIdHeader,
-                                             @RequestHeader("X-Tenant-Id") String tenantId) {
-
+                                             @
         if (!StringUtils.hasText(userIdHeader)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }

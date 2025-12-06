@@ -18,7 +18,10 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  localStorage.clear();
+});
 afterAll(() => server.close());
 
 function renderWithProviders() {
@@ -32,7 +35,7 @@ function renderWithProviders() {
 }
 
 describe('LoginPage', () => {
-  it('renders login form and submits credentials', async () => {
+  it('logs in successfully and stores token', async () => {
     renderWithProviders();
 
     fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'alice' } });
@@ -43,6 +46,32 @@ describe('LoginPage', () => {
 
     await waitFor(() => {
       expect(screen.queryByText(/Login failed/i)).not.toBeInTheDocument();
+      expect(localStorage.getItem('sup_token')).toBe('dummy.jwt.token');
+    });
+  });
+
+  it('shows error message when backend returns 401', async () => {
+    server.use(
+      rest.post('http://localhost:8080/auth/login', async (_req, res, ctx) =>
+        res(
+          ctx.status(401),
+          ctx.json({
+            message: 'Invalid credentials'
+          })
+        )
+      )
+    );
+
+    renderWithProviders();
+
+    fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'alice' } });
+    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'wrong' } });
+    fireEvent.change(screen.getByLabelText(/Tenant \/ Faculty/i), { target: { value: 'engineering' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Sign in/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Invalid credentials/i)).toBeInTheDocument();
     });
   });
 });

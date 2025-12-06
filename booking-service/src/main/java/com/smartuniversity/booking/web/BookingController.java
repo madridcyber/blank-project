@@ -5,6 +5,8 @@ import com.smartuniversity.booking.web.dto.CreateReservationRequest;
 import com.smartuniversity.booking.web.dto.CreateResourceRequest;
 import com.smartuniversity.booking.web.dto.ReservationDto;
 import com.smartuniversity.booking.web.dto.ResourceDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/booking")
+@Tag(name = "Booking", description = "Resource management and reservations")
 public class BookingController {
 
     private final BookingService bookingService;
@@ -34,18 +37,21 @@ public class BookingController {
     }
 
     @GetMapping("/resources")
+    @Operation(summary = "List resources", description = "Returns all bookable resources for the current tenant")
     public List<ResourceDto> listResources(@RequestHeader("X-Tenant-Id") String tenantId) {
         return bookingService.listResources(tenantId);
     }
 
     @PostMapping("/resources")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create resource", description = "Creates a new resource (TEACHER/ADMIN only, enforced at gateway)")
     public ResourceDto createResource(@Valid @RequestBody CreateResourceRequest request,
                                       @RequestHeader("X-Tenant-Id") String tenantId) {
         return bookingService.createResource(request, tenantId);
     }
 
     @PostMapping("/reservations")
+    @Operation(summary = "Create reservation", description = "Creates a reservation and enforces no overbooking for a resource")
     public ResponseEntity<ReservationDto> createReservation(
             @Valid @RequestBody CreateReservationRequest request,
             @RequestHeader("X-User-Id") String userIdHeader,

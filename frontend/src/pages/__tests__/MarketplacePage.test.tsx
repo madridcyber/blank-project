@@ -1,13 +1,16 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { rest } from 'msw';
 import { setupServer } from 'msw/node';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../../state/AuthContext';
 import { MarketplacePage } from '../MarketplacePage';
 
+const productsPath = 'http://localhost:8080/market/products';
+const checkoutPath = 'http://localhost:8080/market/orders/checkout';
+
 const server = setupServer(
-  rest.get('http://localhost:8080/market/products', async (_req, res, ctx) =>
+  rest.get(productsPath, async (_req, res, ctx) =>
     res(
       ctx.status(200),
       ctx.json([
@@ -15,12 +18,61 @@ const server = setupServer(
         { id: 'p2', name: 'Textbook', description: 'Algorithms', price: 50.0, stock: 5 }
       ])
     )
+  ),
+  rest.post(checkoutPath, async (_req, res, ctx) =>
+    res(
+      ctx.status(201),
+      ctx.json({
+        id: 'order-1'
+      })
+    )
+  ),
+  rest.post(productsPath, async (_req, res, ctx) =>
+    res(
+      ctx.status(201),
+      ctx.json({
+        id: 'p3',
+        name: 'Lab Manual',
+        description: 'Chemistry experiments',
+        price: 15.0,
+        stock: 20
+      })
+    )
   )
 );
 
 beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  localStorage.clear();
+});
 afterAll(() => server.close());
+
+function seedTeacherToken() {
+  const payload = {
+    sub: 'teacher-1',
+    role: 'TEACHER',
+    tenant: 'engineering'
+  };
+  const encoded = btoa(JSON.stringify(payload));
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const token = `${header}.${encoded}.signature`;
+  localStorage.setItem('sup_token', token);
+  localStorage.setItem('sup_tenant', 'engineering');
+}
+
+function seedStudentToken() {
+  const payload = {
+    sub: 'student-1',
+    role: 'STUDENT',
+    tenant: 'engineering'
+  };
+  const encoded = btoa(JSON.stringify(payload));
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const token = `${header}.${encoded}.signature`;
+  localStorage.setItem('sup_token', token);
+  localStorage.setItem('sup_tenant', 'engineering');
+}
 
 function renderWithProviders() {
   return render(
@@ -34,10 +86,84 @@ function renderWithProviders() {
 
 describe('MarketplacePage', () => {
   it('renders products fetched from API', async () => {
+    seedStudentToken();
     renderWithProviders();
     await waitFor(() => {
       expect(screen.getByText(/Notebook/i)).toBeInTheDocument();
       expect(screen.getByText(/Textbook/i)).toBeInTheDocument();
     });
   });
-});
+
+  it('allows teacher to create a product', async () => {
+    seedTeacherToken();
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Notebook/i)).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/New product name/i), { target: { value: 'Lab Manual' } });
+    fireEvent.change(screen.getByLabelText(/Description/i), { target: { value: 'Chemistry experiments' } });
+    fireEvent.change(screen.getByLabelText(/Price/), { target: { value: '15' } });
+    fireEvent.change(screen.getByLabelText(/Initial stock/i), { target: { value: '20' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Create product/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Product created successfully/i)).toBeInTheDocument();
+      expect(screen.getByText(/Lab Manual/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows insufficient stock message on checkout conflict', async () => {
+    seedStudentToken();
+    server.use(
+      rest.post(checkoutPath, async (_req, res, ctx) =>
+        res(
+          ctx.status(409),
+          ctx.json({
+            message: 'Insufficient stock'
+          })
+        )
+      )
+    );
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Notebook/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Buy 1/i })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Insufficient stock for this product/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows payment failure message on checkout 402', async () => {
+    seedStudentToken();
+    server.use(
+      rest.post(checkoutPath, async (_req, res, ctx) =>
+        res(
+          ctx.status(402),
+          ctx.json({
+            message: 'Payment required'
+          })
+        )
+      )
+    );
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Notebook/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Buy 1/i })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Payment authorization failed/i)).toBeInTheDocument();
+    });
+  });
+}

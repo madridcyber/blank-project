@@ -22,7 +22,10 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  localStorage.clear();
+});
 afterAll(() => server.close());
 
 function renderWithProviders() {
@@ -40,6 +43,14 @@ describe('DashboardPage', () => {
     renderWithProviders();
     await waitFor(() => {
       expect(screen.getByText(/Lecture Hall Temp/i)).toBeInTheDocument();
+    });
+  });
+
+  it('renders shuttle dot from API', async () => {
+    renderWithProviders();
+    await waitFor(() => {
+      // The shuttle dot uses the shuttle name as its title attribute
+      expect(screen.getByTitle(/Shuttle A/i)).toBeInTheDocument();
     });
   });
 });

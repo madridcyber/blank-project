@@ -4,6 +4,8 @@ import com.smartuniversity.exam.service.ExamService;
 import com.smartuniversity.exam.web.dto.CreateExamRequest;
 import com.smartuniversity.exam.web.dto.ExamDto;
 import com.smartuniversity.exam.web.dto.SubmitExamRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +20,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * REST API for managing exams and submissions.
+ * REST API for exam creation, start, and submissions.
  */
 @RestController
 @RequestMapping("/exam")
+@Tag(name = "Exams", description = "Exam management and submissions")
 public class ExamController {
 
     private final ExamService examService;
@@ -31,6 +34,10 @@ public class ExamController {
     }
 
     @PostMapping("/exams")
+    @Operation(
+            summary = "Create exam",
+            description = "Creates a new exam with questions. Only TEACHER/ADMIN are allowed to call this endpoint."
+    )
     public ResponseEntity<ExamDto> createExam(@Valid @RequestBody CreateExamRequest request,
                                               @RequestHeader("X-User-Id") String userIdHeader,
                                               @RequestHeader("X-User-Role") String role,
@@ -46,6 +53,11 @@ public class ExamController {
     }
 
     @PostMapping("/exams/{id}/start")
+    @Operation(
+            summary = "Start exam",
+            description = "Starts an exam by moving it to LIVE state, invoking Notification with a Circuit Breaker, and publishing an event. "
+                    + "Only the exam creator with TEACHER/ADMIN role may start the exam."
+    )
     public ResponseEntity<ExamDto> startExam(@PathVariable("id") UUID examId,
                                              @RequestHeader("X-User-Id") String userIdHeader,
                                              @RequestHeader("X-User-Role") String role,
@@ -61,17 +73,20 @@ public class ExamController {
     }
 
     @PostMapping("/exams/{id}/submit")
+    @Operation(
+            summary = "Submit exam answers",
+            description = "Submits answers for an exam. Only STUDENT role is allowed. Exam must be in LIVE state and duplicates are rejected."
+    )
     public ResponseEntity<Void> submitExam(@PathVariable("id") UUID examId,
                                            @Valid @RequestBody SubmitExamRequest request,
                                            @RequestHeader("X-User-Id") String userIdHeader,
                                            @RequestHeader("X-User-Role") String role,
                                            @RequestHeader("X-Tenant-Id") String tenantId) {
 
-        if (!StringUtils.hasText(userIdHeader)) {
+        if (!StringUtils.hasText(userIdHeader) || !StringUtils.hasText(role)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // For simplicity, enforce that only students can submit.
         if (!"STUDENT".equals(role)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
