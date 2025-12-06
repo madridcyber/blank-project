@@ -1,6 +1,16 @@
 spring:
   application:
     name: dashboard-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:dashboarddb}
+    username: ${DB_USER:dashboard}
+    password: ${DB_PASSWORD:dashboard}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
 server:
   port: ${SERVER_PORT:8087}

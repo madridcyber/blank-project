@@ -166,4 +166,59 @@ describe('MarketplacePage', () => {
       expect(screen.getByText(/Payment authorization failed/i)).toBeInTheDocument();
     });
   });
+
+  it('allows student to checkout multiple items from cart', async () => {
+    seedStudentToken();
+
+    let receivedBody: any = null;
+    server.use(
+      rest.post(checkoutPath, async (req, res, ctx) => {
+        receivedBody = await req.json();
+        return res(
+          ctx.status(201),
+          ctx.json({
+            id: 'order-cart-1'
+          })
+        );
+      })
+    );
+
+    renderWithProviders();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Notebook/i)).toBeInTheDocument();
+      expect(screen.getByText(/Textbook/i)).toBeInTheDocument();
+    });
+
+    // Add 2 notebooks to cart
+    fireEvent.change(screen.getByLabelText(/Quantity for Notebook/i), {
+      target: { value: '2' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Add to cart/i }));
+
+    // Add 1 textbook to cart
+    fireEvent.change(screen.getByLabelText(/Quantity for Textbook/i), {
+      target: { value: '1' }
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: /Add to cart/i })[1]);
+
+    fireEvent.click(screen.getByRole('button', { name: /Checkout cart/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Order order-cart-1 created successfully from cart./i)).toBeInTheDocument();
+    });
+
+    expect(receivedBody).not.toBeNull();
+    expect(Array.isArray(receivedBody.items)).toBe(true);
+    expect(receivedBody.items).toHaveLength(2);
+    const quantities = receivedBody.items.reduce(
+      (acc: Record<string, number>, item: any) => ({
+        ...acc,
+        [item.productId]: item.quantity
+      }),
+      {}
+    );
+    expect(quantities['p1']).toBe(2);
+    expect(quantities['p2']).toBe(1);
+  });
 }

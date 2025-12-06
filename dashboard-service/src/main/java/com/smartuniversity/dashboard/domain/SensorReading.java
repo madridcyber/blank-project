@@ -1,17 +1,57 @@
 package com.smartuniversity.dashboard.domain;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+
 import java.time.Instant;
 import java.util.UUID;
 
+@Entity
+@Table(name = "sensors")
 public class SensorReading {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
+
+    @Column(name = "tenant_id", nullable = false, length = 64)
     private String tenantId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
     private SensorType type;
+
+    @Column(nullable = false, length = 200)
     private String label;
+
+    @Column(nullable = false)
     private double value;
+
+    @Column(nullable = false, length = 16)
     private String unit;
+
+    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @PrePersist
+    public void prePersist() {
+        if (updatedAt == null) {
+            updatedAt = Instant.now();
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        updatedAt = Instant.now();
+    }
 
     public SensorReading() {
     }

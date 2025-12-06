@@ -14,7 +14,9 @@ import com.smartuniversity.exam.state.ExamState;
 import com.smartuniversity.exam.state.ExamStateFactory;
 import com.smartuniversity.exam.web.dto.CreateExamRequest;
 import com.smartuniversity.exam.web.dto.CreateQuestionRequest;
+import com.smartuniversity.exam.web.dto.ExamDetailDto;
 import com.smartuniversity.exam.web.dto.ExamDto;
+import com.smartuniversity.exam.web.dto.QuestionDto;
 import com.smartuniversity.exam.web.dto.SubmitExamRequest;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.HttpStatus;
@@ -54,14 +56,23 @@ public class ExamService {
     }
 
     @Transactional(readOnly = true)
-    public Lis<eExamDto> listExams(String tenantId) {
+    public List<ExamDto> listExams(String tenantId) {
         return examRepository.findAllByTenantId(tenantId).stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public ExamDetailDto getExamDetail(UUID examId, String tenantId) {
+        Exam exam = examRepository.findByIdAndTenantId(examId, tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exam not found"));
+
+        return toDetailDto(exam);
+    }
+
     @Transactional
-    public ExamDto createExam(CreateExamRequest request, UUID creatorId, String        if (!"TEACHER".equals(role) && !"ADMIN".equals(role)) {
+    public ExamDto createExam(CreateExamRequest request, UUID creatorId, String tenantId, String role) {
+        if (!"TEACHER".equals(role) && !"ADMIN".equals(role)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only teachers or admins may create exams");
         }
         if (CollectionUtils.isEmpty(request.getQuestions())) {
@@ -158,6 +169,22 @@ public class ExamService {
                 exam.getDescription(),
                 exam.getStartTime(),
                 exam.getState()
+        );
+    }
+
+    public ExamDetailDto toDetailDto(Exam exam) {
+        List<QuestionDto> questionDtos = exam.getQuestions().stream()
+                .sorted((a, b) -> Integer.compare(a.getSortOrder(), b.getSortOrder()))
+                .map(q -> new QuestionDto(q.getId(), q.getText(), q.getSortOrder()))
+                .collect(Collectors.toList());
+
+        return new ExamDetailDto(
+                exam.getId(),
+                exam.getTitle(),
+                exam.getDescription(),
+                exam.getStartTime(),
+                exam.getState(),
+                questionDtos
         );
     }
 }

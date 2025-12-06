@@ -50,6 +50,7 @@ C4Container
         ContainerDb(paydb, "Payment DB", "PostgreSQL")
         ContainerDb(examdb, "Exam DB", "PostgreSQL")
         ContainerDb(notifdb, "Notification DB", "PostgreSQL")
+        ContainerDb(dashdb, "Dashboard DB", "PostgreSQL", "Sensors and shuttle locations")
         Container(rabbit, "RabbitMQ", "AMQP", "Domain event bus")
     }
 
@@ -72,6 +73,7 @@ C4Container
     Rel(payment, paydb, "JPA")
     Rel(exam, examdb, "JPA")
     Rel(notification, notifdb, "JPA")
+    Rel(dashboard, dashdb, "JPA")
 
     Rel(market, rabbit, "Publishes order.confirmed")
     Rel(exam, rabbit, "Publishes exam.started")

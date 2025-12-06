@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useConfiguredApi } from '../api/client';
-
-import React, { useEffect, useState } from 'react';
-import { useConfiguredApi } from '../api/client';
 import { useAuth } from '../state/AuthContext';
 
 type Product = {
@@ -13,12 +10,19 @@ type Product = {
   stock: number;
 };
 
+type CartItem = {
+  productId: string;
+  productName: string;
+  quantity: number;
+};
+
 export const MarketplacePage: React.FC = () => {
   const api = useConfiguredApi();
   const { role } = useAuth();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -27,6 +31,10 @@ export const MarketplacePage: React.FC = () => {
   const [newPrice, setNewPrice] = useState('10');
   const [newStock, setNewStock] = useState('10');
   const [createMessage, setCreateMessage] = useState<string | null>(null);
+
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartBusy, setCartBusy] = useState(false);
+  const [quantities, setQuantities] = useState<Record<string, string>>({});
 
   const isTeacherOrAdmin = role === 'TEACHER' || role === 'ADMIN';
 
@@ -80,6 +88,64 @@ export const MarketplacePage: React.FC = () => {
     } catch (err: any) {
       const msg = err.response?.data?.message ?? 'Failed to create product.';
       setCreateMessage(msg);
+    }
+  };
+
+  const handleQuantityChange = (productId: string, value: string) => {
+    setQuantities((prev) => ({ ...prev, [productId]: value }));
+  };
+
+  const handleAddToCart = (product: Product) => {
+    const raw = quantities[product.id] ?? '1';
+    const parsed = parseInt(raw, 10);
+    const quantity = Number.isNaN(parsed) || parsed <= 0 ? 1 : parsed;
+
+    setCartItems((prev) => {
+      const existing = prev.find((i) => i.productId === product.id);
+      if (existing) {
+        return prev.map((i) =>
+          i.productId === product.id ? { ...i, quantity: i.quantity + quantity } : i
+        );
+      }
+      return [...prev, { productId: product.id, productName: product.name, quantity }];
+    });
+
+    setCheckoutMessage(null);
+  };
+
+  const handleRemoveFromCart = (productId: string) => {
+    setCartItems((prev) => prev.filter((i) => i.productId !== productId));
+  };
+
+  const handleCheckoutCart = async () => {
+    if (cartItems.length === 0) {
+      setCheckoutMessage('Your cart is empty.');
+      return;
+    }
+
+    setCartBusy(true);
+    setCheckoutMessage(null);
+    try {
+      const payload = {
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity
+        }))
+      };
+      const res = await api.post('/market/orders/checkout', payload);
+      setCheckoutMessage(`Order ${res.data.id} created successfully from cart.`);
+      setCartItems([]);
+    } catch (err: any) {
+      const status = err.response?.status;
+      if (status === 402) {
+        setCheckoutMessage('Payment authorization failed. Please try again later.');
+      } else if (status === 409) {
+        setCheckoutMessage('Insufficient stock for one or more products in your cart.');
+      } else {
+        setCheckoutMessage(err.response?.data?.message ?? 'Checkout failed.');
+      }
+    } finally {
+      setCartBusy(false);
     }
   };
 
@@ -158,7 +224,25 @@ export const MarketplacePage: React.FC = () => {
                 <div className="sensor-meta">
                   {p.description || 'No description'} · stock {p.stock}
                 </div>
-                <div style={{ marginTop: '0.35rem' }}>
+                <div style={{ marginTop: '0.35rem', display: 'flex', gap: '0.4rem' }}>
+                  <input
+                    aria-label={`Quantity for ${p.name}`}
+                    className="form-input"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={quantities[p.id] ?? '1'}
+                    onChange={(e) => handleQuantityChange(p.id, e.target.value)}
+                    style={{ maxWidth: '4rem', padding: '0.2rem 0.4rem', fontSize: '0.78rem' }}
+                  />
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}
+                    onClick={() => handleAddToCart(p)}
+                  >
+                    Add to cart
+                  </button>
                   <button
                     type="button"
                     className="btn-primary"
@@ -171,8 +255,43 @@ export const MarketplacePage: React.FC = () => {
                 </div>
               </div>
             ))}
-            {products.length === 0 && <div className="card-subtitle">No products available yet.</div>}
+            {products.length === 0 && (
+              <div className="card-subtitle">No products available yet.</div>
+            )}
           </div>
+
+          <div className="card-subtitle" style={{ marginTop: '0.9rem' }}>
+            Cart
+          </div>
+          {cartItems.length === 0 ? (
+            <div className="card-subtitle">Your cart is empty.</div>
+          ) : (
+            <div className="card-subtitle" style={{ marginBottom: '0.5rem' }}>
+              <ul style={{ paddingLeft: '1.2rem', marginBottom: '0.5rem' }}>
+                {cartItems.map((item) => (
+                  <li key={item.productId}>
+                    {item.productName} × {item.quantity}{' '}
+                    <button
+                      type="button"
+                      className="btn-link"
+                      onClick={() => handleRemoveFromCart(item.productId)}
+                    >
+                      remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={cartBusy}
+                onClick={handleCheckoutCart}
+              >
+                {cartBusy ? 'Processing…' : 'Checkout cart'}
+              </button>
+            </div>
+          )}
+
           {checkoutMessage && (
             <div className="card-subtitle" style={{ marginTop: '0.6rem' }}>
               {checkoutMessage}

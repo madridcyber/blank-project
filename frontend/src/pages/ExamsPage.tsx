@@ -10,6 +10,15 @@ type ExamSummary = {
   startTime: string;
 };
 
+type ExamDetail = {
+  id: string;
+  title: string;
+  description?: string;
+  state: string;
+  startTime: string;
+  questions: { id: string; text: string; sortOrder: number }[];
+};
+
 export const ExamsPage: React.FC = () => {
   const api = useConfiguredApi();
   const { role } = useAuth();
@@ -24,7 +33,9 @@ export const ExamsPage: React.FC = () => {
   const [status, setStatus] = useState<string | null>(null);
 
   const [submitExamId, setSubmitExamId] = useState('');
-  const [studentAnswer, setStudentAnswer] = useState('');
+  const [loadedExam, setLoadedExam] = useState<ExamDetail | null>(null);
+  const [answersByQuestion, setAnswersByQuestion] = useState<Record<string, string>>({});
+  const [loadingExamDetail, setLoadingExamDetail] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +74,9 @@ export const ExamsPage: React.FC = () => {
       });
       setCreatedExamId(res.data.id);
       setStatus('Exam created. You can now start it.');
+      // Refresh list
+      const listRes = await api.get<ExamSummary[]>('/exam/exams');
+      setExams(listRes.data);
     } catch (err: any) {
       setStatus(err.response?.data?.message ?? 'Failed to create exam');
     }
@@ -77,27 +91,62 @@ export const ExamsPage: React.FC = () => {
     try {
       const res = await api.post(`/exam/exams/${createdExamId}/start`);
       setStatus(`Exam started. State: ${res.data.state}`);
+      const listRes = await api.get<ExamSummary[]>('/exam/exams');
+      setExams(listRes.data);
     } catch (err: any) {
       setStatus(err.response?.data?.message ?? 'Failed to start exam');
     }
   };
 
+  const handleLoadExamDetail = async () => {
+    setStatus(null);
+    if (!submitExamId) {
+      setStatus('Provide an exam ID to load.');
+      return;
+    }
+    setLoadingExamDetail(true);
+    try {
+      const res = await api.get<ExamDetail>(`/exam/exams/${submitExamId}`);
+      setLoadedExam(res.data);
+      setAnswersByQuestion({});
+    } catch (err: any) {
+      setLoadedExam(null);
+      setStatus(err.response?.data?.message ?? 'Failed to load exam details');
+    } finally {
+      setLoadingExamDetail(false);
+    }
+  };
+
+  const handleAnswerChange = (questionId: string, value: string) => {
+    setAnswersByQuestion((prev) => ({ ...prev, [questionId]: value }));
+  };
+
   const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus(null);
-    if (!submitExamId) {
-      setStatus('Provide an exam ID to submit.');
+
+    if (!loadedExam) {
+      setStatus('Load exam details before submitting.');
       return;
     }
+
+    const answers: Record<string, string> = {};
+    loadedExam.questions.forEach((q, index) => {
+      const key = `q${index + 1}`;
+      answers[key] = answersByQuestion[q.id] ?? '';
+    });
+
+    const hasAnyAnswer = Object.values(answers).some((a) => a.trim().length > 0);
+    if (!hasAnyAnswer) {
+      setStatus('Provide at least one answer.');
+      return;
+    }
+
     try {
-      const payload = {
-        answers: {
-          q1: studentAnswer
-        }
-      };
-      await api.post(`/exam/exams/${submitExamId}/submit`, payload);
+      const payload = { answers };
+      await api.post(`/exam/exams/${loadedExam.id}/submit`, payload);
       setStatus('Submission sent successfully.');
-      setStudentAnswer('');
+      setAnswersByQuestion({});
     } catch (err: any) {
       setStatus(err.response?.data?.message ?? 'Failed to submit answers');
     }
@@ -143,11 +192,21 @@ export const ExamsPage: React.FC = () => {
           <form onSubmit={handleCreateExam}>
             <div className="form-field">
               <label className="form-label">Exam title</label>
-              <input className="form-input" value={title} onChange={(e) => setTitle(e.target.value)} required />
+              <input
+                className="form-input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
             </div>
             <div className="form-field">
               <label className="form-label">Question</label>
-              <input className="form-input" value={question} onChange={(e) => setQuestion(e.target.value)} required />
+              <input
+                className="form-input"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                required
+              />
             </div>
             <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.5rem' }}>
               <button type="submit" className="btn-primary">
@@ -170,24 +229,47 @@ export const ExamsPage: React.FC = () => {
         <form onSubmit={handleStudentSubmit} style={{ marginTop: '0.8rem' }}>
           <div className="form-field">
             <label className="form-label">Exam ID</label>
-            <input
-              className="form-input"
-              value={submitExamId}
-              onChange={(e) => setSubmitExamId(e.target.value)}
-              placeholder="Paste the exam ID shared by your teacher"
-              required
-            />
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                className="form-input"
+                value={submitExamId}
+                onChange={(e) => setSubmitExamId(e.target.value)}
+                placeholder="Paste the exam ID shared by your teacher"
+                required
+              />
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={handleLoadExamDetail}
+                disabled={loadingExamDetail}
+              >
+                {loadingExamDetail ? 'Loading…' : 'Load exam'}
+              </button>
+            </div>
           </div>
-          <div className="form-field">
-            <label className="form-label">Your answer</label>
-            <textarea
-              className="form-input"
-              style={{ minHeight: '80px', borderRadius: '14px' }}
-              value={studentAnswer}
-              onChange={(e) => setStudentAnswer(e.target.value)}
-              required
-            />
-          </div>
+
+          {loadedExam && (
+            <div className="form-field">
+              <label className="form-label">Questions for {loadedExam.title}</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {loadedExam.questions.map((q, idx) => (
+                  <div key={q.id}>
+                    <div className="card-subtitle" style={{ marginBottom: '0.2rem' }}>
+                      Q{idx + 1}: {q.text}
+                    </div>
+                    <textarea
+                      aria-label={`Answer for ${q.text}`}
+                      className="form-input"
+                      style={{ minHeight: '80px', borderRadius: '14px' }}
+                      value={answersByQuestion[q.id] ?? ''}
+                      onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button type="submit" className="btn-primary">
             Submit answers
           </button>

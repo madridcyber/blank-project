@@ -71,6 +71,16 @@ services:
     volumes:
       - notification-db-data:/var/lib/postgresql/data
 
+  dashboard-db:
+    image: postgres:15
+    container_name: dashboard-db
+    environment:
+      POSTGRES_DB: dashboarddb
+      POSTGRES_USER: dashboard
+      POSTGRES_PASSWORD: dashboard
+    volumes:
+      - dashboard-db-data:/var/lib/postgresql/data
+
   gateway-service:
     build: ./gateway-service
     container_name: gateway-service
@@ -200,7 +210,14 @@ services:
   dashboard-service:
     build: ./dashboard-service
     container_name: dashboard-service
+    depends_on:
+      - dashboard-db
     environment:
+      DB_HOST: dashboard-db
+      DB_PORT: 5432
+      DB_NAME: dashboarddb
+      DB_USER: dashboard
+      DB_PASSWORD: dashboard
       SERVER_PORT: 8087
 
   frontend:
@@ -220,3 +237,4 @@ volumes:
   payment-db-data:
   exam-db-data:
   notification-db-data:
+  dashboard-db-data:

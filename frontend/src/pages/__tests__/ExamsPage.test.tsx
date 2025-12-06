@@ -21,6 +21,21 @@ const server = setupServer(
       ])
     )
   ),
+  rest.get('http://localhost:8080/exam/exams/exam-2', async (_req, res, ctx) =>
+    res(
+      ctx.status(200),
+      ctx.json({
+        id: 'exam-2',
+        title: 'Loaded Exam',
+        description: 'Demo',
+        startTime: new Date().toISOString(),
+        state: 'LIVE',
+        questions: [
+          { id: 'q-1', text: 'What is microservices?', sortOrder: 1 }
+        ]
+      })
+    )
+  ),
   rest.post('http://localhost:8080/exam/exams', async (_req, res, ctx) =>
     res(
       ctx.status(201),
@@ -115,12 +130,21 @@ describe('ExamsPage', () => {
     });
   });
 
-  it('allows student to submit answers', async () => {
+  it('allows student to load exam details and submit answers', async () => {
     seedStudentToken();
     renderWithProviders();
 
     fireEvent.change(screen.getByLabelText(/Exam ID/i), { target: { value: 'exam-2' } });
-    fireEvent.change(screen.getByLabelText(/Your answer/i), { target: { value: '42' } });
+    fireEvent.click(screen.getByRole('button', { name: /Load exam/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Questions for Loaded Exam/i)).toBeInTheDocument();
+      expect(screen.getByText(/What is microservices\?/i)).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText(/Answer for What is microservices\?/i), {
+      target: { value: '42' }
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /Submit answers/i }));
 

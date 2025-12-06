@@ -2,6 +2,7 @@ package com.smartuniversity.exam.web;
 
 import com.smartuniversity.exam.service.ExamService;
 import com.smartuniversity.exam.web.dto.CreateExamRequest;
+import com.smartuniversity.exam.web.dto.ExamDetailDto;
 import com.smartuniversity.exam.web.dto.ExamDto;
 import com.smartuniversity.exam.web.dto.SubmitExamRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,6 +47,20 @@ public class ExamController {
         }
         List<ExamDto> exams = examService.listExams(tenantId);
         return ResponseEntity.ok(exams);
+    }
+
+    @GetMapping("/exams/{id}")
+    @Operation(
+            summary = "Get exam details",
+            description = "Returns exam metadata and questions for the current tenant."
+    )
+    public ResponseEntity<ExamDetailDto> getExam(@PathVariable("id") UUID examId,
+                                                 @RequestHeader("X-Tenant-Id") String tenantId) {
+        if (!StringUtils.hasText(tenantId)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        ExamDetailDto exam = examService.getExamDetail(examId, tenantId);
+        return ResponseEntity.ok(exam);
     }
 
     @PostMapping("/exams")
