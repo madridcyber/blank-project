@@ -153,7 +153,7 @@ This report reflects on key technical learnings from implementing the Smart Univ
 
 - **Design choices**:
   - Database-per-service with straightforward, indexable queries.
-  - In-memory simulation for Dashboard sensors & shuttles (no DB overhead).
+  - Dashboard sensors & shuttles stored in the Dashboard service's PostgreSQL database and updated via scheduled jobs, while reads remain simple and cache-friendly.
   - Caching product lists in Marketplace (`@Cacheable` on `GET /market/products`).
 
 - **Trade-offs**:

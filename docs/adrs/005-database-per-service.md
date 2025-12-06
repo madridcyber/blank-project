@@ -14,7 +14,7 @@ The Smart University Platform is decomposed into multiple microservices:
 - Payment Service
 - Exam Service
 - Notification Service
-- Dashboard Service (stateless)
+- Dashboard Service
 - API Gateway (stateless)
 
 Each service has its own domain model and data requirements. We must decide how to structure persistence:
@@ -62,15 +62,15 @@ We adopt **Option 3 – Database-per-service**.
 
 Implementation details:
 
-- `docker-compose.yml` defines individual PostgreSQL containers for each service:
-  - `auth-db`, `booking-db`, `market-db`, `payment-db`, `exam-db`, `notification-db`.
-- Each Spring Boot service has its own `spring.datasource.*` configuration pointing to its database.
+- `docker-compose.yml` defines individual PostgreSQL containers for each stateful service:
+  - `auth-db`, `booking-db`, `market-db`, `payment-db`, `exam-db`, `notification-db`, `dashboard-db`.
+- Each Spring Boot service (except the stateless API Gateway) has its own `spring.datasource.*` configuration pointing to its database.
 - There are **no cross-service foreign keys or joins** at the database level.
 - Inter-service communication strictly occurs via:
   - HTTP APIs (synchronous).
   - RabbitMQ events (asynchronous).
 
-The Dashboard and Gateway services remain stateless and do not maintain their own databases.
+The API Gateway remains stateless and does not maintain its own database.
 
 ## Rationale
 

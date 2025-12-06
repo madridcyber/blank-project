@@ -263,6 +263,52 @@ Compensation endpoint used by Marketplace.
 
 ## 5. Exam Service – `/exam/**`
 
+### GET `/exam/exams`
+
+Lists exams for the current tenant (metadata only, no submissions).
+
+- **Auth**: Any authenticated user.
+- **Headers**:
+  - `X-Tenant-Id`.
+- **Response** `200 OK`:
+
+  ```json
+  [
+    {
+      "id": "exam-uuid",
+      "title": "Midterm",
+      "description": "CS101 midterm",
+      "startTime": "2024-05-01T09:00:00Z",
+      "state": "SCHEDULED"
+    }
+  ]
+  ```
+
+### GET `/exam/exams/{id}`
+
+Returns exam metadata and its questions for the current tenant.
+
+- **Auth**: Any authenticated user in the same tenant.
+- **Headers**:
+  - `X-Tenant-Id`.
+- **Path variable**: `id` – exam UUID.
+- **Response** `200 OK`:
+
+  ```json
+  {
+    "id": "exam-uuid",
+    "title": "Midterm",
+    "description": "CS101 midterm",
+    "startTime": "2024-05-01T09:00:00Z",
+    "state": "LIVE",
+    "questions": [
+      { "id": "q-1", "text": "What is Java?", "sortOrder": 1 }
+    ]
+  }
+  ```
+
+  - If the exam does not exist for the tenant, returns `404 Not Found`.
+
 ### POST `/exam/exams`
 
 Creates an exam (teacher/admin only).
@@ -370,7 +416,7 @@ For each event, a `NotificationLog` entry is stored.
 
 ### GET `/dashboard/sensors`
 
-Returns live sensor readings per tenant.
+Returns live sensor readings per tenant, backed by the Dashboard service's PostgreSQL database.
 
 - **Auth**: Any authenticated user.
 - **Headers**:

@@ -79,7 +79,7 @@ This repository is organised as a **Maven multi-module monorepo** for backend se
 This repository provides a `docker-compose.yml` that starts:
 
 - RabbitMQ (with management UI).
-- A PostgreSQL database per service (auth, booking, market, payment, exam, notification).
+- A PostgreSQL database per service (auth, booking, market, payment, exam, notification, dashboard).
 - All backend microservices.
 - The API Gateway.
 - The React SPA served via Nginx.
@@ -182,19 +182,23 @@ Once `docker-compose up --build` is running:
      - The product is created via `POST /market/products`.
      - The product list is automatically updated and cached per tenant.
 
-6. **Student: register and buy a product (Saga flow)**
+6. **Student: register and buy products (Saga flow)**
 
    - Log out and register a new **STUDENT** user (e.g. `student1`) with the same tenant (`engineering`).
    - Log in as this student.
    - Go to **Marketplace**:
      - You see the products created by the teacher (tenant-scoped).
-   - Click **Buy 1** on a product:
-     - SPA sends `POST /market/orders/checkout`.
-     - Saga orchestrator in Marketplace:
-       - Creates a `PENDING` order.
-       - Calls Payment Service to authorise.
-       - Decrements stock with pessimistic locking.
-       - Marks order `CONFIRMED` and publishes `order.confirmed` event.
+   - You now have two options:
+     - **Quick buy**: click **Buy 1** on a product:
+       - SPA sends `POST /market/orders/checkout` with a single item (`quantity: 1`).
+       - Saga orchestrator in Marketplace:
+         - Creates a `PENDING` order.
+         - Calls Payment Service to authorise.
+         - Decrements stock with pessimistic locking.
+         - Marks order `CONFIRMED` and publishes `order.confirmed` event.
+     - **Cart checkout**: adjust quantities using the inputs next to each product, click **Add to cart** for multiple products, then click **Checkout cart**:
+       - SPA sends `POST /market/orders/checkout` with multiple items and quantities.
+       - The same Saga orchestrates payment, stock decrement, and compensation if any item is out of stock.
    - The UI displays a success message or appropriate error (e.g. insufficient stock or simulated payment failure).
    - Notification Service consumes the `order.confirmed` event and logs a `NotificationLog` entry.
 
@@ -214,13 +218,15 @@ Once `docker-compose up --build` is running:
      - Exam Service publishes `ExamStartedEvent` to RabbitMQ.
      - Notification Service also logs the event.
 
-8. **Student: submit exam answers**
+8. **Student: load exam and submit answers**
 
    - Log in as `student1`.
    - Go to **Exams**.
    - In the student section:
      - Paste the exam ID that the teacher created and started.
-     - Enter your answer in the text area.
+     - Click **Load exam**.
+     - The SPA calls `GET /exam/exams/{id}` through the gateway and displays the exam title and questions.
+     - Enter your answers for the displayed questions.
      - Click **Submit answers**.
    - Exam Service:
      - Verifies the exam is in `LIVE` state.
@@ -233,7 +239,7 @@ Once `docker-compose up --build` is running:
    - The SPA periodically polls:
      - `/dashboard/sensors` for live metrics.
      - `/dashboard/shuttle` for shuttle position.
-   - The Dashboard service keeps these values in memory and updates them via scheduled jobs, so responses are fast and consistent.
+   - The Dashboard service persists sensor readings and shuttle locations in its own PostgreSQL database and updates them via scheduled jobs, so responses are fast and consistent while remaining durable across restarts.
 
 > **Note on demo data**  
 > When running via `docker-compose`, the `demo` profile seeds initial data for the `engineering` tenant:
