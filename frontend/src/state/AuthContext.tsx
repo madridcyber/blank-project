@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { setAuthContext } from '../api/client';
 
 type AuthContextValue = {
   token: string | null;
@@ -9,7 +10,7 @@ type AuthContextValue = {
   logout: () => void;
 };
 
-const AuthContext = createContext<AuthContextValuetextValue | undefined&gt;(undefined);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function decodeJwt(token: string): any | null {
   try {
@@ -33,9 +34,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (stored) {
       setToken(stored);
       const payload = decodeJwt(stored);
+      const resolvedTenant = storedTenant ?? payload?.tenant ?? null;
       setRole(payload?.role ?? null);
       setUserId(payload?.sub ?? null);
-      setTenantId(storedTenant ?? payload?.tenant ?? null);
+      setTenantId(resolvedTenant);
+      setAuthContext(stored, resolvedTenant);
     }
   }, []);
 
@@ -50,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTenantId(resolvedTenant);
     setRole(payload?.role ?? null);
     setUserId(payload?.sub ?? null);
+    setAuthContext(newToken, resolvedTenant);
   };
 
   const logout = () => {
@@ -59,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUserId(null);
     localStorage.removeItem('sup_token');
     localStorage.removeItem('sup_tenant');
+    setAuthContext(null, null);
   };
 
   const value: AuthContextValue = {
@@ -70,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout
   };
 
-  return &lt;AuthContext.Provider value={value}&gt;{children}&lt;/AuthContext.Provider&gt;;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export function useAuth(): AuthContextValue {

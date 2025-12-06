@@ -1,11 +1,15 @@
 package com.smartuniversity.market.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.smartuniversity.market.domain.Order;
+import com.smartuniversity.market.domain.OrderStatus;
 import com.smartuniversity.market.domain.Product;
+import com.smartuniversity.market.repository.OrderRepository;
 import com.smartuniversity.market.repository.ProductRepository;
-import com.smartuniversity.market.service.OrderSagaService;
+import com.smartuniversity.market.service.PaymentClient;
 import com.smartuniversity.market.web.dto.CheckoutRequest;
 import com.smartuniversity.market.web.dto.OrderItemRequest;
+import com.smartuniversity.market.web.dto.PaymentResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -22,6 +26,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
@@ -48,10 +53,16 @@ class MarketplaceControllerIntegrationTest {
     @MockBean
     private RabbitTemplate rabbitTemplate;
 
+    @MockBean
+    private PaymentClient paymentClient;
+
+    @Autowired
+    private OrderRepository orderRepository;
+
     @BeforeEach
     void setUp() {
         productRepository.deleteAll();
-    }
+        orderRepository.delete    }
 
     @Test
     void createProductAndListShouldWorkForTeacher() throws Exception {
@@ -105,6 +116,14 @@ class MarketplaceControllerIntegrationTest {
         item.setQuantity(2);
         checkoutRequest.setItems(List.of(item));
 
+        // Mock payment authorization to succeed
+        PaymentResponse paymentResponse = new PaymentResponse();
+        paymentResponse.setPaymentId(UUID.randomUUID());
+        paymentResponse.setOrderId(UUID.randomUUID());
+        paymentResponse.setStatus("AUTHORIZED");
+        Mockito.when(paymentClient.authorize(eq(tenantId), any()))
+                .thenReturn(paymentResponse);
+
         // Mock RabbitTemplate to avoid needing a running broker
         Mockito.doNothing().when(rabbitTemplate)
                 .convertAndSend(eq("university.events"), eq("market.order.confirmed"), any());
@@ -117,5 +136,90 @@ class MarketplaceControllerIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.items[0].productId", notNullValue()));
+
+        // Ensure we did not trigger compensation
+        Mockito.verify(paymentClient, Mockito.never()).cancel(eq(tenantId), any());
+    }
+
+    @Test
+    void checkoutShouldCancelOrderWhenPaymentFails() throws Exception {
+        String tenantId = "engineering";
+        String buyerId = UUID.randomUUID().toString();
+
+        Product product = new Product();
+        product.setTenantId(tenantId);
+        product.setSellerId(UUID.randomUUID());
+        product.setName("Notebook");
+        product.setDescription("A5");
+        product.setPrice(BigDecimal.valueOf(5.0));
+        product.setStock(100);
+        product = productRepository.save(product);
+
+        CheckoutRequest checkoutRequest = new CheckoutRequest();
+        OrderItemRequest item = new OrderItemRequest();
+        item.setProductId(product.getId());
+        item.setQuantity(1);
+        checkoutRequest.setItems(List.of(item));
+
+        // Simulate payment authorization failure via HTTP 402
+        Mockito.when(paymentClient.authorize(eq(tenantId), any()))
+                .thenThrow(new RuntimeException("Payment gateway down"));
+
+        mockMvc.perform(post("/market/orders/checkout")
+                        .header("X-Tenant-Id", tenantId)
+                        .header("X-User-Id", buyerId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(checkoutRequest)))
+                .andExpect(status().isPaymentRequired());
+
+        // Orders that fail payment are marked as CANCELED by the Saga
+        List<Order> orders = orderRepository.findAll();
+        assertThat(orders).hasSize(1);
+        assertThat(orders.get(0).getStatus()).isEqualTo(OrderStatus.CANCELED);
+
+        Mockito.verify(paymentClient, Mockito.never()).cancel(eq(tenantId), any());
+    }
+
+    @Test
+    void checkoutShouldCompensatePaymentWhenStockInsufficient() throws Exception {
+        String tenantId = "engineering";
+        String buyerId = UUID.randomUUID().toString();
+
+        Product product = new Product();
+        product.setTenantId(tenantId);
+        product.setSellerId(UUID.randomUUID());
+        product.setName("Limited Edition Notebook");
+        product.setDescription("Only one left");
+        product.setPrice(BigDecimal.valueOf(5.0));
+        product.setStock(1);
+        product = productRepository.save(product);
+
+        CheckoutRequest checkoutRequest = new CheckoutRequest();
+        OrderItemRequest item = new OrderItemRequest();
+        item.setProductId(product.getId());
+        item.setQuantity(2); // request more than available stock
+        checkoutRequest.setItems(List.of(item));
+
+        // Payment authorization succeeds
+        PaymentResponse paymentResponse = new PaymentResponse();
+        paymentResponse.setPaymentId(UUID.randomUUID());
+        paymentResponse.setOrderId(UUID.randomUUID());
+        paymentResponse.setStatus("AUTHORIZED");
+        Mockito.when(paymentClient.authorize(eq(tenantId), any()))
+                .thenReturn(paymentResponse);
+
+        mockMvc.perform(post("/market/orders/checkout")
+                        .header("X-Tenant-Id", tenantId)
+                        .header("X-User-Id", buyerId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(checkoutRequest)))
+                .andExpect(status().isConflict());
+
+        // Saga should have canceled the order and invoked payment cancellation
+        List<Order> orders = orderRepository.findAll();
+        assertThat(orders).hasSize(1);
+        assertThat(orders.get(0).getStatus()).isEqualTo(OrderStatus.CANCELED);
+
+        Mockito.verify(paymentClient).cancel(eq(tenantId), any());
     }
 }
