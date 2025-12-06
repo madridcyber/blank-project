@@ -1,0 +1,219 @@
+version: "3.9"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  auth-db:
+    image: postgres:15
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: authdb
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+
+  booking-db:
+    image: postgres:15
+    container_name: booking-db
+    environment:
+      POSTGRES_DB: bookingdb
+      POSTGRES_USER: booking
+      POSTGRES_PASSWORD: booking
+    volumes:
+      - booking-db-data:/var/lib/postgresql/data
+
+  market-db:
+    image: postgres:15
+    container_name: market-db
+    environment:
+      POSTGRES_DB: marketdb
+      POSTGRES_USER: market
+      POSTGRES_PASSWORD: market
+    volumes:
+      - market-db-data:/var/lib/postgresql/data
+
+  payment-db:
+    image: postgres:15
+    container_name: payment-db
+    environment:
+      POSTGRES_DB: paymentdb
+      POSTGRES_USER: payment
+      POSTGRES_PASSWORD: payment
+    volumes:
+      - payment-db-data:/var/lib/postgresql/data
+
+  exam-db:
+    image: postgres:15
+    container_name: exam-db
+    environment:
+      POSTGRES_DB: examdb
+      POSTGRES_USER: exam
+      POSTGRES_PASSWORD: exam
+    volumes:
+      - exam-db-data:/var/lib/postgresql/data
+
+  notification-db:
+    image: postgres:15
+    container_name: notification-db
+    environment:
+      POSTGRES_DB: notificationdb
+      POSTGRES_USER: notification
+      POSTGRES_PASSWORD: notification
+    volumes:
+      - notification-db-data:/var/lib/postgresql/data
+
+  gateway-service:
+    build: ./gateway-service
+    container_name: gateway-service
+    depends_on:
+      - auth-service
+      - booking-service
+      - marketplace-service
+      - payment-service
+      - exam-service
+      - notification-service
+      - dashboard-service
+    environment:
+      JWT_SECRET: "dev-jwt-secret-change-me"
+      AUTH_SERVICE_URL: http://auth-service:8081
+      BOOKING_SERVICE_URL: http://booking-service:8082
+      MARKETPLACE_SERVICE_URL: http://marketplace-service:8083
+      PAYMENT_SERVICE_URL: http://payment-service:8084
+      EXAM_SERVICE_URL: http://exam-service:8085
+      NOTIFICATION_SERVICE_URL: http://notification-service:8086
+      DASHBOARD_SERVICE_URL: http://dashboard-service:8087
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    depends_on:
+      - auth-db
+    environment:
+      DB_HOST: auth-db
+      DB_PORT: 5432
+      DB_NAME: authdb
+      DB_USER: auth
+      DB_PASSWORD: auth
+      JWT_SECRET: "dev-jwt-secret-change-me"
+      JWT_EXPIRATION_MS: 3600000
+      SERVER_PORT: 8081
+
+  booking-service:
+    build: ./booking-service
+    container_name: booking-service
+    depends_on:
+      - booking-db
+    environment:
+      DB_HOST: booking-db
+      DB_PORT: 5432
+      DB_NAME: bookingdb
+      DB_USER: booking
+      DB_PASSWORD: booking
+      SERVER_PORT: 8082
+
+  marketplace-service:
+    build: ./marketplace-service
+    container_name: marketplace-service
+    depends_on:
+      - market-db
+      - rabbitmq
+      - payment-service
+    environment:
+      DB_HOST: market-db
+      DB_PORT: 5432
+      DB_NAME: marketdb
+      DB_USER: market
+      DB_PASSWORD: market
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      PAYMENT_SERVICE_BASE_URL: http://payment-service:8084
+      SERVER_PORT: 8083
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    depends_on:
+      - payment-db
+    environment:
+      DB_HOST: payment-db
+      DB_PORT: 5432
+      DB_NAME: paymentdb
+      DB_USER: payment
+      DB_PASSWORD: payment
+      SERVER_PORT: 8084
+
+  exam-service:
+    build: ./exam-service
+    container_name: exam-service
+    depends_on:
+      - exam-db
+      - rabbitmq
+      - notification-service
+    environment:
+      DB_HOST: exam-db
+      DB_PORT: 5432
+      DB_NAME: examdb
+      DB_USER: exam
+      DB_PASSWORD: exam
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      NOTIFICATION_SERVICE_BASE_URL: http://notification-service:8086
+      SERVER_PORT: 8085
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    depends_on:
+      - notification-db
+      - rabbitmq
+    environment:
+      DB_HOST: notification-db
+      DB_PORT: 5432
+      DB_NAME: notificationdb
+      DB_USER: notification
+      DB_PASSWORD: notification
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      SERVER_PORT: 8086
+
+  dashboard-service:
+    build: ./dashboard-service
+    container_name: dashboard-service
+    environment:
+      SERVER_PORT: 8087
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    depends_on:
+      - gateway-service
+    environment:
+      VITE_API_BASE_URL: http://gateway-service:8080
+    ports:
+      - "3000:80"
+
+volumes:
+  auth-db-data:
+  booking-db-data:
+  market-db-data:
+  payment-db-data:
+  exam-db-data:
+  notification-db-data:
