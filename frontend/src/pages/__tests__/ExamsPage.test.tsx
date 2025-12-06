@@ -7,6 +7,20 @@ import { AuthProvider } from '../../state/AuthContext';
 import { ExamsPage } from '../ExamsPage';
 
 const server = setupServer(
+  rest.get('http://localhost:8080/exam/exams', async (_req, res, ctx) =>
+    res(
+      ctx.status(200),
+      ctx.json([
+        {
+          id: 'exam-list-1',
+          title: 'Seeded Exam',
+          description: 'Seed',
+          startTime: new Date().toISOString(),
+          state: 'SCHEDULED'
+        }
+      ])
+    )
+  ),
   rest.post('http://localhost:8080/exam/exams', async (_req, res, ctx) =>
     res(
       ctx.status(201),
@@ -70,10 +84,14 @@ function renderWithProviders() {
 }
 
 describe('ExamsPage', () => {
-  it('renders exam orchestration header', () => {
+  it('renders exam orchestration header and exam list', async () => {
     seedTeacherToken();
     renderWithProviders();
     expect(screen.getByText(/Exam orchestration/i)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Seeded Exam/i)).toBeInTheDocument();
+    });
   });
 
   it('allows teacher to create and start an exam', async () => {

@@ -1,10 +1,22 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useConfiguredApi } from '../api/client';
 import { useAuth } from '../state/AuthContext';
+
+type ExamSummary = {
+  id: string;
+  title: string;
+  description?: string;
+  state: string;
+  startTime: string;
+};
 
 export const ExamsPage: React.FC = () => {
   const api = useConfiguredApi();
   const { role } = useAuth();
+
+  const [exams, setExams] = useState<ExamSummary[]>([]);
+  const [loadingExams, setLoadingExams] = useState(true);
+  const [examsError, setExamsError] = useState<string | null>(null);
 
   const [title, setTitle] = useState('Sample exam');
   const [question, setQuestion] = useState('What is microservices architecture?');
@@ -13,6 +25,31 @@ export const ExamsPage: React.FC = () => {
 
   const [submitExamId, setSubmitExamId] = useState('');
   const [studentAnswer, setStudentAnswer] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadExams = async () => {
+      setExamsError(null);
+      try {
+        const res = await api.get<ExamSummary[]>('/exam/exams');
+        if (!cancelled) {
+          setExams(res.data);
+        }
+      } catch (_err: any) {
+        if (!cancelled) {
+          setExamsError('Failed to load exams');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingExams(false);
+        }
+      }
+    };
+    loadExams();
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
 
   const handleCreateExam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +114,29 @@ export const ExamsPage: React.FC = () => {
         </div>
         <div className="chip">State + Circuit Breaker demo</div>
       </div>
+
+      <div className="card-subtitle" style={{ marginBottom: '0.4rem', marginTop: '0.5rem' }}>
+        Existing exams for this tenant
+      </div>
+      {loadingExams && <div className="card-subtitle">Loading exams…</div>}
+      {!loadingExams && examsError && (
+        <div className="card-subtitle text-danger">{examsError}</div>
+      )}
+      {!loadingExams && !examsError && exams.length === 0 && (
+        <div className="card-subtitle">No exams yet. Teachers can create one below.</div>
+      )}
+      {!loadingExams && !examsError && exams.length > 0 && (
+        <ul
+          className="card-subtitle"
+          style={{ paddingLeft: '1.2rem', marginBottom: '0.8rem' }}
+        >
+          {exams.map((e) => (
+            <li key={e.id}>
+              <code>{e.id}</code> – {e.title} ({e.state})
+            </li>
+          ))}
+        </ul>
+      )}
 
       {isTeacherOrAdmin && (
         <>
