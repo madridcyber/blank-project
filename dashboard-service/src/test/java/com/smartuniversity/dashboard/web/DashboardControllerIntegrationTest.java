@@ -29,8 +29,8 @@ class DashboardControllerIntegrationTest {
     @Test
     void getSensorsShouldReturnDefaultSensorsForTenant() throws Exception {
         mockMvc.perform(get("/dashboard/sensors")
-                        .header("X-Tenant-Id", "engineering")
-                        .accept(MediaType.APPLICATION_JSON))
+                .header("X-Tenant-Id", "engineering")
+                .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThan(0))));
     }
