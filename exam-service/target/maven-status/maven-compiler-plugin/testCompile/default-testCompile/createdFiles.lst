@@ -1,0 +1,4 @@
+com/smartuniversity/exam/ExamServiceApplicationTests.class
+com/smartuniversity/exam/service/NotificationClientCircuitBreakerTest.class
+com/smartuniversity/exam/state/ExamStateFactoryTests.class
+com/smartuniversity/exam/web/ExamControllerIntegrationTest.class

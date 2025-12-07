@@ -1,0 +1,4 @@
+/workspace/exam-service/src/test/java/com/smartuniversity/exam/service/NotificationClientCircuitBreakerTest.java
+/workspace/exam-service/src/test/java/com/smartuniversity/exam/web/ExamControllerIntegrationTest.java
+/workspace/exam-service/src/test/java/com/smartuniversity/exam/state/ExamStateFactoryTests.java
+/workspace/exam-service/src/test/java/com/smartuniversity/exam/ExamServiceApplicationTests.java
