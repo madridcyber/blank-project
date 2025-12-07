@@ -36,9 +36,9 @@ public class OrderSagaService {
     private final RabbitTemplate rabbitTemplate;
 
     public OrderSagaService(ProductRepository productRepository,
-                            OrderRepository orderRepository,
-                            PaymentClient paymentClient,
-                            RabbitTemplate rabbitTemplate) {
+            OrderRepository orderRepository,
+            PaymentClient paymentClient,
+            RabbitTemplate rabbitTemplate) {
         this.productRepository = productRepository;
         this.orderRepository = orderRepository;
         this.paymentClient = paymentClient;
@@ -91,8 +91,7 @@ public class OrderSagaService {
                 confirmed.getBuyerId(),
                 tenantId,
                 confirmed.getTotalAmount(),
-                Instant.now()
-        );
+                Instant.now());
         rabbitTemplate.convertAndSend("university.events", "market.order.confirmed", event);
 
         return toDto(confirmed);
@@ -151,14 +150,16 @@ public class OrderSagaService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is not pending");
         }
 
-        // Decrement stock with pessimistic locks to avoid concurrent stock depletion
+        // Decrement stock; in this sample we rely on single-node execution and simple
+        // stock checks
         for (OrderItem item : order.getItems()) {
             UUID productId = item.getProduct().getId();
-            Product product = productRepository.findByIdAndTenantIdForUpdate(productId, tenantId)
+            Product product = productRepository.findByIdAndTenantId(productId, tenantId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
 
             if (product.getStock() < item.getQuantity()) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient stock for product " + product.getName());
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Insufficient stock for product " + product.getName());
             }
 
             product.setStock(product.getStock() - item.getQuantity());

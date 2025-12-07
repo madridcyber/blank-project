@@ -38,13 +38,13 @@ public class MarketplaceController {
     private final OrderSagaService orderSagaService;
 
     public MarketplaceController(ProductRepository productRepository,
-                                 OrderSagaService orderSagaService) {
+            OrderSagaService orderSagaService) {
         this.productRepository = productRepository;
         this.orderSagaService = orderSagaService;
     }
 
     @GetMapping("/products")
-    @Cacheable(cacheNames = "productsByTenant", key = "#tenantId")
+    @Cacheable(cacheNames = "productsByTenant", key = "#root.args[0]")
     @Operation(summary = "List products", description = "Returns all products for the current tenant")
     public List<ProductDto> listProducts(@RequestHeader("X-Tenant-Id") String tenantId) {
         return productRepository.findAllByTenantId(tenantId).stream()
@@ -53,12 +53,12 @@ public class MarketplaceController {
     }
 
     @PostMapping("/products")
-    @CacheEvict(cacheNames = "productsByTenant", key = "#tenantId")
+    @CacheEvict(cacheNames = "productsByTenant", key = "#root.args[3]")
     @Operation(summary = "Create product", description = "Creates a new product (TEACHER/ADMIN only, enforced at gateway)")
     public ResponseEntity<ProductDto> createProduct(@Valid @RequestBody ProductRequest request,
-                                                    @RequestHeader("X-User-Id") String userIdHeader,
-                                                    @RequestHeader("X-User-Role") String role,
-                                                    @RequestHeader("X-Tenant-Id") String tenantId) {
+            @RequestHeader("X-User-Id") String userIdHeader,
+            @RequestHeader("X-User-Role") String role,
+            @RequestHeader("X-Tenant-Id") String tenantId) {
 
         if (!StringUtils.hasText(userIdHeader) || !StringUtils.hasText(role)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -80,15 +80,16 @@ public class MarketplaceController {
         product.setStock(request.getStock());
 
         Product saved = productRepository.save(product);
-        ProductDto dto = new ProductDto(saved.getId(), saved.getName(), saved.getDescription(), saved.getPrice(), saved.getStock());
+        ProductDto dto = new ProductDto(saved.getId(), saved.getName(), saved.getDescription(), saved.getPrice(),
+                saved.getStock());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
     @PostMapping("/orders/checkout")
     @Operation(summary = "Checkout order", description = "Orchestrates the Saga across payment and stock updates for the given items")
     public ResponseEntity<OrderDto> checkout(@Valid @RequestBody CheckoutRequest request,
-                                             @RequestHeader("X-User-Id") String userIdHeader,
-                                             @RequestHeader("X-Tenant-Id") String tenantId) {
+            @RequestHeader("X-User-Id") String userIdHeader,
+            @RequestHeader("X-Tenant-Id") String tenantId) {
 
         if (!StringUtils.hasText(userIdHeader)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

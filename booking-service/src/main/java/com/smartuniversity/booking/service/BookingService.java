@@ -26,7 +26,7 @@ public class BookingService {
     private final ReservationRepository reservationRepository;
 
     public BookingService(ResourceRepository resourceRepository,
-                          ReservationRepository reservationRepository) {
+            ReservationRepository reservationRepository) {
         this.resourceRepository = resourceRepository;
         this.reservationRepository = reservationRepository;
     }
@@ -56,11 +56,12 @@ public class BookingService {
 
     @Transactional
     public ReservationDto createReservation(CreateReservationRequest request, UUID userId, String tenantId) {
-        if (request.getEndTime().isBefore(request.getStartTime()) || request.getEndTime().equals(request.getStartTime())) {
+        if (request.getEndTime().isBefore(request.getStartTime())
+                || request.getEndTime().equals(request.getStartTime())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End time must be after start time");
         }
 
-        Resource resource = resourceRepository.findByIdAndTenantId(request.getResourceId(), tenantId)
+        Resource resource = resourceRepository.findByIdAndTenantIdForUpdate(request.getResourceId(), tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found"));
 
         Instant start = request.getStartTime();
@@ -71,8 +72,7 @@ public class BookingService {
                 tenantId,
                 ReservationStatus.CREATED,
                 start,
-                end
-        );
+                end);
         if (!overlapping.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Resource already reserved for requested period");
         }
@@ -92,7 +92,6 @@ public class BookingService {
                 saved.getUserId(),
                 saved.getStartTime(),
                 saved.getEndTime(),
-                saved.getStatus()
-        );
+                saved.getStatus());
     }
 }
