@@ -44,7 +44,7 @@ public class MarketplaceController {
     }
 
     @GetMapping("/products")
-    @Cacheable(cacheNames = "productsByTenant", key = "#tenantId")
+    @Cacheable(cacheNames = "productsByTenant", key = "#root.args[0]")
     @Operation(summary = "List products", description = "Returns all products for the current tenant")
     public List<ProductDto> listProducts(@RequestHeader("X-Tenant-Id") String tenantId) {
         return productRepository.findAllByTenantId(tenantId).stream()
@@ -53,7 +53,7 @@ public class MarketplaceController {
     }
 
     @PostMapping("/products")
-    @CacheEvict(cacheNames = "productsByTenant", key = "#tenantId")
+    @CacheEvict(cacheNames = "productsByTenant", key = "#root.args[3]")
     @Operation(summary = "Create product", description = "Creates a new product (TEACHER/ADMIN only, enforced at gateway)")
     public ResponseEntity<ProductDto> createProduct(@Valid @RequestBody ProductRequest request,
                                                     @RequestHeader("X-User-Id") String userIdHeader,
