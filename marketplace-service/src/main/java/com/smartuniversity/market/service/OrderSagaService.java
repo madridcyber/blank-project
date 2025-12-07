@@ -151,10 +151,10 @@ public class OrderSagaService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is not pending");
         }
 
-        // Decrement stock with pessimistic locks to avoid concurrent stock depletion
+        // Decrement stock; in this sample we rely on single-node execution and simple stock checks
         for (OrderItem item : order.getItems()) {
             UUID productId = item.getProduct().getId();
-            Product product = productRepository.findByIdAndTenantIdForUpdate(productId, tenantId)
+            Product product = productRepository.findByIdAndTenantId(productId, tenantId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
 
             if (product.getStock() < item.getQuantity()) {
