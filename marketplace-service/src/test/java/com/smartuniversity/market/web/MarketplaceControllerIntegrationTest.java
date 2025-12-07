@@ -61,8 +61,8 @@ class MarketplaceControllerIntegrationTest {
 
         @BeforeEach
         void setUp() {
-                productRepository.deleteAll();
                 orderRepository.deleteAll();
+                productRepository.deleteAll();
         }
 
         @Test
