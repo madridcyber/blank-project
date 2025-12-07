@@ -1,0 +1,14 @@
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/web/dto/ReservationDto.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/repository/ResourceRepository.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/domain/Resource.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/web/dto/ResourceDto.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/service/BookingService.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/web/dto/CreateReservationRequest.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/web/dto/CreateResourceRequest.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/BookingServiceApplication.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/config/DemoDataConfig.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/domain/ReservationStatus.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/config/SecurityConfig.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/repository/ReservationRepository.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/web/BookingController.java
+/workspace/booking-service/src/main/java/com/smartuniversity/booking/domain/Reservation.java

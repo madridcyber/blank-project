@@ -1,0 +1,11 @@
+/workspace/auth-service/src/main/java/com/smartuniversity/auth/web/dto/AuthResponse.java
+/workspace/auth-service/src/main/java/com/smartuniversity/auth/domain/User.java
+/workspace/auth-service/src/main/java/com/smartuniversity/auth/AuthServiceApplication.java
+/workspace/auth-service/src/main/java/com/smartuniversity/auth/repository/UserRepository.java
+/workspace/auth-service/src/main/java/com/smartuniversity/auth/web/dto/RegisterRequest.java
+/workspace/auth-service/src/main/java/com/smartuniversity/auth/domain/Role.java
+/workspace/auth-service/src/main/java/com/smartuniversity/auth/web/dto/LoginRequest.java
+/workspace/auth-service/src/main/java/com/smartuniversity/auth/service/JwtService.java
+/workspace/auth-service/src/main/java/com/smartuniversity/auth/config/SecurityConfig.java
+/workspace/auth-service/src/main/java/com/smartuniversity/auth/web/AuthController.java
+/workspace/auth-service/src/main/java/com/smartuniversity/auth/service/AuthService.java

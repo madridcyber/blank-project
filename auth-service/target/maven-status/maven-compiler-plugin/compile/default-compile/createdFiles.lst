@@ -1,0 +1,11 @@
+com/smartuniversity/auth/service/AuthService.class
+com/smartuniversity/auth/AuthServiceApplication.class
+com/smartuniversity/auth/service/JwtService.class
+com/smartuniversity/auth/repository/UserRepository.class
+com/smartuniversity/auth/domain/Role.class
+com/smartuniversity/auth/config/SecurityConfig.class
+com/smartuniversity/auth/domain/User.class
+com/smartuniversity/auth/web/dto/RegisterRequest.class
+com/smartuniversity/auth/web/AuthController.class
+com/smartuniversity/auth/web/dto/AuthResponse.class
+com/smartuniversity/auth/web/dto/LoginRequest.class

@@ -2,6 +2,7 @@ package com.smartuniversity.booking.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartuniversity.booking.domain.Resource;
+import com.smartuniversity.booking.repository.ReservationRepository;
 import com.smartuniversity.booking.repository.ResourceRepository;
 import com.smartuniversity.booking.web.dto.CreateReservationRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,9 @@ class BookingControllerIntegrationTest {
     private ResourceRepository resourceRepository;
 
     @Autowired
+    private ReservationRepository reservationRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     private Resource resource;
@@ -51,6 +55,8 @@ class BookingControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        // Clear reservations first to avoid FK violations when wiping resources
+        reservationRepository.deleteAll();
         resourceRepository.deleteAll();
 
         Resource res = new Resource();
@@ -64,7 +70,7 @@ class BookingControllerIntegrationTest {
     @Test
     void listResourcesShouldReturnResourcesForTenant() throws Exception {
         mockMvc.perform(get("/booking/resources")
-                        .header("X-Tenant-Id", tenantId))
+                .header("X-Tenant-Id", tenantId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].id", notNullValue()))
@@ -88,19 +94,19 @@ class BookingControllerIntegrationTest {
 
         // First reservation should succeed
         mockMvc.perform(post("/booking/reservations")
-                        .header("X-Tenant-Id", tenantId)
-                        .header("X-User-Id", userId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(first)))
+                .header("X-Tenant-Id", tenantId)
+                .header("X-User-Id", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(first)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()));
 
         // Second overlapping reservation should be rejected with 409
         mockMvc.perform(post("/booking/reservations")
-                        .header("X-Tenant-Id", tenantId)
-                        .header("X-User-Id", userId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(overlapping)))
+                .header("X-Tenant-Id", tenantId)
+                .header("X-User-Id", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(overlapping)))
                 .andExpect(status().isConflict());
     }
 
@@ -120,10 +126,10 @@ class BookingControllerIntegrationTest {
         List<Callable<Integer>> tasks = new ArrayList<>();
         for (int i = 0; i < 2; i++) {
             tasks.add(() -> mockMvc.perform(post("/booking/reservations")
-                            .header("X-Tenant-Id", tenantId)
-                            .header("X-User-Id", userId)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json))
+                    .header("X-Tenant-Id", tenantId)
+                    .header("X-User-Id", userId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json))
                     .andReturn()
                     .getResponse()
                     .getStatus());
@@ -146,7 +152,8 @@ class BookingControllerIntegrationTest {
             executor.shutdownNow();
         }
 
-        // With pessimistic locking, exactly one request should succeed and the other should see a conflict.
+        // With pessimistic locking, exactly one request should succeed and the other
+        // should see a conflict.
         assertThat(success).isEqualTo(1);
         assertThat(conflict).isEqualTo(1);
     }

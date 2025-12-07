@@ -1,0 +1,5 @@
+/workspace/gateway-service/src/main/java/com/smartuniversity/gateway/security/JwtService.java
+/workspace/gateway-service/src/main/java/com/smartuniversity/gateway/config/SecurityConfig.java
+/workspace/gateway-service/src/main/java/com/smartuniversity/gateway/security/JwtAuthenticationFilter.java
+/workspace/gateway-service/src/main/java/com/smartuniversity/gateway/security/JwtUserDetails.java
+/workspace/gateway-service/src/main/java/com/smartuniversity/gateway/GatewayServiceApplication.java

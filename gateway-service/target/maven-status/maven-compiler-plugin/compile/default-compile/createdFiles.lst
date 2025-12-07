@@ -1,0 +1,5 @@
+com/smartuniversity/gateway/GatewayServiceApplication.class
+com/smartuniversity/gateway/security/JwtAuthenticationFilter.class
+com/smartuniversity/gateway/security/JwtService.class
+com/smartuniversity/gateway/security/JwtUserDetails.class
+com/smartuniversity/gateway/config/SecurityConfig.class

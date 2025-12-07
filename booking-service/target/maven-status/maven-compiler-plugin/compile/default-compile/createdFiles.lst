@@ -1,0 +1,14 @@
+com/smartuniversity/booking/web/BookingController.class
+com/smartuniversity/booking/config/SecurityConfig.class
+com/smartuniversity/booking/repository/ReservationRepository.class
+com/smartuniversity/booking/BookingServiceApplication.class
+com/smartuniversity/booking/service/BookingService.class
+com/smartuniversity/booking/domain/ReservationStatus.class
+com/smartuniversity/booking/web/dto/CreateReservationRequest.class
+com/smartuniversity/booking/web/dto/ReservationDto.class
+com/smartuniversity/booking/web/dto/CreateResourceRequest.class
+com/smartuniversity/booking/web/dto/ResourceDto.class
+com/smartuniversity/booking/config/DemoDataConfig.class
+com/smartuniversity/booking/domain/Reservation.class
+com/smartuniversity/booking/domain/Resource.class
+com/smartuniversity/booking/repository/ResourceRepository.class
