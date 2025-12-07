@@ -60,7 +60,7 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End time must be after start time");
         }
 
-        Resource resource = resourceRepository.findByIdAndTenantId(request.getResourceId(), tenantId)
+        Resource resource = resourceRepository.findByIdAndTenantIdForUpdate(request.getResourceId(), tenantId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found"));
 
         Instant start = request.getStartTime();
