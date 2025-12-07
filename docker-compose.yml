@@ -82,7 +82,9 @@ services:
       - dashboard-db-data:/var/lib/postgresql/data
 
   gateway-service:
-    build: ./gateway-service
+    build:
+      context: .
+      dockerfile: gateway-service/Dockerfile
     container_name: gateway-service
     depends_on:
       - auth-service
@@ -121,8 +123,9 @@ services:
       SERVER_PORT: 8081
 
   booking-service:
-    build: ./booking-service
-    container_name: booking-service
+    build:
+      context: .
+      dockerfile: booking-serviceice
     depends_on:
       - booking-db
     environment:
@@ -135,7 +138,9 @@ services:
       SPRING_PROFILES_ACTIVE: demo
 
   marketplace-service:
-    build: ./marketplace-service
+    build:
+      context: .
+vice
     container_name: marketplace-service
     depends_on:
       - market-db
@@ -156,8 +161,10 @@ services:
       SPRING_PROFILES_ACTIVE: demo
 
   payment-service:
-    build: ./payment-service
-    container_name: payment-service
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    container_namee
     depends_on:
       - payment-db
     environment:
@@ -169,7 +176,9 @@ services:
       SERVER_PORT: 8084
 
   exam-service:
-    build: ./exam-service
+    build:
+      context: .
+      dockerfile: exam-service/Dockerfile
     container_name: exam-service
     depends_on:
       - exam-db
@@ -190,7 +199,9 @@ services:
       SPRING_PROFILES_ACTIVE: demo
 
   notification-service:
-    build: ./notification-service
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
     container_name: notification-service
     depends_on:
       - notification-db
@@ -208,8 +219,9 @@ services:
       SERVER_PORT: 8086
 
   dashboard-service:
-    build: ./dashboard-service
-    container_name: dashboard-service
+    build:
+      context: .
+      dockerfile: dashboardboard-service
     depends_on:
       - dashboard-db
     environment:
