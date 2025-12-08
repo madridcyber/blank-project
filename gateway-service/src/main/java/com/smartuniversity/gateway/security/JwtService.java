@@ -3,12 +3,13 @@ package com.smartuniversity.gateway.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.util.Base64;
 
 /**
  * Service for validating JWT tokens at the API Gateway.
@@ -19,7 +20,19 @@ public class JwtService {
     private final Key signingKey;
 
     public JwtService(@Value("${security.jwt.secret}") String secret) {
-        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        byte[] keyBytes;
+        try {
+            // Try standard Base64 decoding first
+            keyBytes = Base64.getDecoder().decode(secret);
+        } catch (IllegalArgumentException e) {
+            // Fall back to URL-safe Base64 or use the secret as-is
+            try {
+                keyBytes = Base64.getUrlDecoder().decode(secret);
+            } catch (IllegalArgumentException e2) {
+                // Use secret directly as bytes if it's not Base64 encoded
+                keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+            }
+        }
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
