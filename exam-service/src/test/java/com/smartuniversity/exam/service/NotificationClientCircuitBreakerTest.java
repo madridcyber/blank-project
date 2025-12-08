@@ -1,7 +1,10 @@
 package com.smartuniversity.exam.service;
 
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
@@ -14,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@EnableAutoConfiguration(exclude = {RabbitAutoConfiguration.class})
 @ActiveProfiles("test")
 class NotificationClientCircuitBreakerTest {
 
@@ -23,6 +27,9 @@ class NotificationClientCircuitBreakerTest {
 
     @MockBean
     private RestTemplate restTemplate;
+
+    @Autowired(required = false)
+    private CircuitBreakerRegistry circuitBreakerRegistry;
 
     @Test
     void notifyExamStartedShouldFallbackOnFailure() {

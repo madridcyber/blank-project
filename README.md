@@ -103,31 +103,45 @@ From the repository root you have two options:
 
 #### Option 1 – Using the helper script (recommended)
 
+**On Linux/macOS/Git Bash:**
 ```bash
 chmod +x scripts/start-platform.sh   # once
-./scripts/start-platform.sh          # build + docker-compose up --build
+./scripts/start-platform.sh          # build + docker compose up --build
 ```
 
-Environment flags:
+**On Windows (Command Prompt/PowerShell):**
+```cmd
+scripts\start-platform.bat           # build + docker compose up --build
+scripts\start-platform.bat -d        # run in detached mode
+```
 
-- `SKIP_TESTS=1` – skip Maven tests during the build.
-- `DETACH=1` – run `docker-compose up` in detached mode.
+Environment flags (Linux/macOS/Git Bash only):
 
-#### Option 2 – Manual docker-compose
+- `DETACH=1` – run `docker compose up` in detached mode.
 
-Build the backend JARs:
+#### Option 2 – Manual docker compose
 
+Build and start everything (Docker multi-stage builds handle Maven internally):
+
+**On any OS:**
 ```bash
-mvn clean package
+docker compose up --build
 ```
 
-Then start everything:
+#### Running Tests
 
+**On Linux/macOS/Git Bash:**
 ```bash
-docker-compose up --build
+chmod +x scripts/run-tests.sh   # once
+./scripts/run-tests.sh
 ```
 
-Key endpoints</:
+**On Windows (Command Prompt/PowerShell):**
+```cmd
+scripts\run-tests.bat
+```
+
+Key endpoints:
 
 
 - API Gateway: http://localhost:8080
@@ -260,18 +274,76 @@ This walkthrough exercises:
 
 ## Status
 
-- **Backend services implemented**:
-  - `common-lib` with shared event models.
-  - `auth-service` with registration, login, JWT, and tests.
-  - `gateway-service` with routing, JWT validation, and coarse RBAC.
-  - `booking-service` with transactional no-overbooking and tests.
-  - `marketplace-service` with Saga orchestration and RabbitMQ events.
-  - `payment-service` with Strategy pattern and tests.
-  - `exam-service` with State pattern, Circuit Breaker, and tests.
-  - `notification-service` with HTTP + RabbitMQ Observer behavior and tests.
-  - `dashboard-service` with simulated IoT data and tests.
+**✅ PROJECT COMPLETE - READY FOR SUBMISSION**
 
-- **Frontend**:
-  - Vite React + TypeScript SPA with auth, dashboard, booking, marketplace, and exams pages.
+### Backend Services (All Implemented)
+- `common-lib` – Shared event models (OrderConfirmedEvent, ExamStartedEvent)
+- `auth-service` – Registration, login, JWT issuance with BCrypt
+- `gateway-service` – Spring Cloud Gateway, JWT validation, RBAC routing
+- `booking-service` – Resources, reservations with pessimistic locking (no overbooking)
+- `marketplace-service` – Products, orders with Saga orchestration
+- `payment-service` – Payment authorization with Strategy pattern
+- `exam-service` – Exam lifecycle with State pattern + Circuit Breaker
+- `notification-service` – Event-driven Observer via RabbitMQ
+- `dashboard-service` – IoT sensors and shuttle simulation
 
-Next steps include enriching tests, adding ADRs and architecture diagrams, and polishing documentation (API docs, AI interaction log, and learning report).
+### Frontend (Complete)
+- React + TypeScript + Vite SPA
+- Protected routes with AuthContext
+- All pages: Login, Register, Dashboard, Booking, Marketplace, Exams
+- Jest + React Testing Library + MSW tests
+
+### Design Patterns (7 Implemented)
+1. **Saga** – Marketplace checkout orchestration
+2. **Circuit Breaker** – Exam → Notification resilience
+3. **Observer** – RabbitMQ event-driven notifications
+4. **State** – Exam lifecycle (DRAFT → SCHEDULED → LIVE → CLOSED)
+5. **Strategy** – Payment provider abstraction
+6. **Repository** – JPA data access layer
+7. **Factory** – ExamStateFactory for state objects
+
+### Documentation (Complete)
+- `README.md` – Project overview and walkthrough
+- `docs/architecture.md` – C4 diagrams, patterns, NFR mapping
+- `docs/api-overview.md` – All HTTP endpoints documented
+- `docs/adrs/` – 5 Architecture Decision Records
+- `docs/AI_Log.md` – AI interaction summary
+- `docs/Learning_Report.md` – Technical reflections
+- `docs/presentation.md` – Presentation slides
+- `docs/project-checklist.md` – Requirements compliance
+
+### Testing (Comprehensive)
+- Backend integration tests for all services
+- Concurrency tests for booking overbooking
+- Saga success and compensation tests
+- Circuit Breaker fallback tests
+- Frontend tests with MSW mocking
+
+### Infrastructure (Complete)
+- Docker Compose for full stack deployment
+- Dockerfiles for all services
+- Windows batch scripts (`scripts/*.bat`)
+- Linux shell scripts (`scripts/*.sh`)
+
+---
+
+## Quick Start
+
+```bash
+# Clone and start everything
+docker compose up --build
+
+# Access points:
+# - Frontend: http://localhost:3000
+# - API Gateway: http://localhost:8080
+# - RabbitMQ UI: http://localhost:15672 (guest/guest)
+```
+
+## Documentation Links
+
+- [Architecture Overview](docs/architecture.md)
+- [API Documentation](docs/api-overview.md)
+- [Project Checklist](docs/project-checklist.md)
+- [Presentation](docs/presentation.md)
+- [Learning Report](docs/Learning_Report.md)
+- [AI Log](docs/AI_Log.md)
