@@ -15,6 +15,10 @@ spring:
     port: 5672
     username: guest
     password: guest
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      - io.github.resilience4j.springboot3.fallback.autoconfigure.FallbackConfigurationOnMissingBean
 
 management:
   endpoints:
@@ -30,3 +34,8 @@ resilience4j:
         failureRateThreshold: 50
         waitDurationInOpenState: 5s
         permittedNumberOfCallsInHalfOpenState: 2
+        registerHealthIndicator: false
+  timelimiter:
+    instances:
+      notificationCb:
+        timeoutDuration: 2s

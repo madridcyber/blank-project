@@ -20,12 +20,17 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v docker-compose >/dev/null 2>&1; then
-  echo "Error: docker-compose is required but not installed or not in PATH." >&2
+# Check for docker compose (V2) or docker-compose (V1)
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE_CMD="docker-compose"
+else
+  echo "Error: docker compose is required but not installed or not in PATH." >&2
   exit 1
 fi
 
-echo "==> Starting full stack with docker-compose (builds images as needed)..."
+echo "==> Starting full stack with $COMPOSE_CMD (builds images as needed)..."
 
 cd "$ROOT_DIR"
 
@@ -34,4 +39,4 @@ if [ "${DETACH:-0}" = "1" ]; then
   DOCKER_ARGS+=("-d")
 fi
 
-docker-compose "${DOCKER_ARGS[@]}"
+$COMPOSE_CMD "${DOCKER_ARGS[@]}"
